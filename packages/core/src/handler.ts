@@ -1,3 +1,9 @@
+/**
+ * @file handler.ts
+ * @description Request handlers for OG image rendering and metadata generation.
+ * @module @og-engine/core
+ */
+
 import {
   PLATFORM_SIZES,
   type MetaRequest,
@@ -5,13 +11,32 @@ import {
   type OGRequest,
   type PlatformAdapter
 } from '@og-engine/types';
-import { getDefaultFonts, type FontConfig } from './fonts.js';
 import { buildCacheKey } from './cache-key.js';
+import { getDefaultFonts, type FontConfig } from './fonts.js';
 import { render } from './render.js';
 
+/**
+ * Dependency bundle for handler creation.
+ */
 export interface HandlerDeps {
+  /** Platform adapter that provides registry, storage, and cache backends. */
   platform: PlatformAdapter;
+
+  /** Optional preloaded fonts. Defaults are loaded when omitted. */
   fonts?: FontConfig[];
+}
+
+interface ImageHandlerResponse {
+  buffer: Buffer;
+  contentType: 'image/png' | 'image/jpeg';
+  headers: Record<string, string>;
+  fromCache: boolean;
+}
+
+interface OGHandler {
+  handleImageRequest(req: OGRequest): Promise<ImageHandlerResponse>;
+  handleMetaRequest(req: MetaRequest): Promise<MetaResponse>;
+  preGenerate(req: OGRequest): Promise<void>;
 }
 
 function buildOGImageUrl(req: MetaRequest): string {
@@ -31,9 +56,15 @@ function getCacheHeaders(): Record<string, string> {
   };
 }
 
-export function createHandler(deps: HandlerDeps) {
-  return {
-    async handleImageRequest(req: OGRequest) {
+/**
+ * Creates image and metadata handlers for a given platform adapter.
+ *
+ * @param deps - Platform dependencies.
+ * @returns Handler object with image, metadata, and pre-generation methods.
+ */
+export function createHandler(deps: HandlerDeps): OGHandler {
+  const handler: OGHandler = {
+    async handleImageRequest(req: OGRequest): Promise<ImageHandlerResponse> {
       const template = await deps.platform.registry.get(req.template);
       const cacheKey = await buildCacheKey(req, template.version);
       const cachedUrl = await deps.platform.cache.get(cacheKey);
@@ -71,17 +102,18 @@ export function createHandler(deps: HandlerDeps) {
         'twitter:image': imageUrl
       };
 
-      void this.preGenerate({ ...req, format: 'png' });
-
+      void handler.preGenerate({ ...req, format: 'png' });
       return meta;
     },
 
     async preGenerate(req: OGRequest): Promise<void> {
       try {
-        await this.handleImageRequest(req);
+        await handler.handleImageRequest(req);
       } catch {
-        // no-op
+        // best-effort background pre-generation
       }
     }
   };
+
+  return handler;
 }

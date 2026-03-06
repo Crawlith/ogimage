@@ -11,7 +11,7 @@
     "test": "node -e \"console.log('no tests')\""
   },
   "dependencies": {
-    "@og-engine/sandbox": "workspace:*",
+    "@og-engine/internal-sandbox": "workspace:*",
     "@og-engine/types": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
     "@resvg/resvg-wasm": "^2.6.2",

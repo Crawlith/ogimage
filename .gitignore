@@ -10,3 +10,6 @@ coverage
 !.env.example
 .og-cache
 .temp
+
+# generated previews (binary, excluded from PR tooling)
+templates/*/preview.png

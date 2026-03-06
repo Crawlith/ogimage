@@ -1,85 +1,103 @@
 import Link from 'next/link';
-import { Zap, Shield, Share2, Github } from 'lucide-react';
 
 export default function Home() {
-    return (
-        <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Hero Section */}
-            <section style={{
-                padding: '8rem 2rem',
-                textAlign: 'center',
-                background: 'radial-gradient(circle at center, #1e1b4b 0%, #000000 70%)'
-            }}>
-                <h1 style={{ fontSize: '4rem', fontWeight: 800, marginBottom: '1.5rem' }} className="gradient-text">
-                    og-engine
-                </h1>
-                <p style={{ fontSize: '1.25rem', color: 'var(--muted-foreground)', maxWidth: '600px', margin: '0 auto 3rem' }}>
-                    Open-source, platform-agnostic social image generation engine.
-                    Zero lock-in, fully extensible, and secure by default.
-                </p>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    <Link href="/templates">
-                        <button style={{
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: 'var(--radius)',
-                            background: 'white',
-                            color: 'black',
-                            fontWeight: 600,
-                            border: 'none',
-                            cursor: 'pointer'
-                        }}>
-                            Explore Templates
-                        </button>
-                    </Link>
-                    <a href="https://github.com/og-engine/og-engine" style={{
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: 'var(--radius)',
-                        background: 'rgba(255,255,255,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontWeight: 600
-                    }}>
-                        <Github size={20} /> GitHub
-                    </a>
-                </div>
-            </section>
-
-            {/* Features */}
-            <section style={{ padding: '6rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                    <FeatureCard
-                        icon={<Zap className="accent" />}
-                        title="Fast"
-                        description="Ultra-fast rendering using Satori and Resvg WASM. Perfect for Edge Runtimes."
-                    />
-                    <FeatureCard
-                        icon={<Shield className="accent" />}
-                        title="Secure"
-                        description="Sandboxed template execution ensures no malicious code can access your infrastructure."
-                    />
-                    <FeatureCard
-                        icon={<Share2 className="accent" />}
-                        title="Agnostic"
-                        description="Deploy anywhere: Cloudflare Workers, Vercel, Node.js, or Docker."
-                    />
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--muted)', borderTop: '1px solid var(--border)' }}>
-                <p>&copy; 2024 og-engine. Built with Satori & Resvg.</p>
-            </footer>
-        </main>
-    );
-}
-
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
-    return (
-        <div className="glass" style={{ padding: '2rem', textAlign: 'left' }}>
-            <div style={{ marginBottom: '1.5rem', color: '#3b82f6' }}>{icon}</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{title}</h3>
-            <p style={{ color: 'var(--muted-foreground)', lineHeight: 1.6 }}>{description}</p>
+  return (
+    <main style={{ minHeight: 'calc(100vh - 48px)' }}>
+      <section
+        style={{
+          minHeight: 'calc(100vh - 110px)',
+          display: 'grid',
+          gridTemplateColumns: '1.1fr 1fr',
+          gap: '24px',
+          padding: '40px 28px'
+        }}
+      >
+        <div
+          style={{
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--bg-surface)',
+            padding: '40px',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: '20px'
+          }}
+        >
+          <div
+            style={{
+              color: 'var(--text-secondary)',
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.14em'
+            }}
+          >
+            Open source · MIT · Self-hostable
+          </div>
+          <h1
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '64px',
+              lineHeight: 1,
+              maxWidth: '740px'
+            }}
+          >
+            Social images that look handcrafted.
+          </h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '18px', maxWidth: '680px', lineHeight: 1.45 }}>
+            Build, preview, and deploy OG image templates with a fast typed engine and adapters for Node, Cloudflare,
+            and Vercel.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+            <Link href="/preview" className="cta-btn" style={{ padding: '10px 14px', fontSize: '14px' }}>
+              Open Editor
+            </Link>
+            <Link href="/templates" className="ghost-btn" style={{ padding: '10px 14px', fontSize: '14px' }}>
+              Browse Templates
+            </Link>
+          </div>
         </div>
-    );
+
+        <div
+          style={{
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-lg)',
+            background: 'var(--bg-surface)',
+            overflow: 'hidden',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <div
+            style={{
+              borderBottom: '1px solid var(--border-subtle)',
+              padding: '12px 14px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            Live OG preview
+          </div>
+          <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <img src="/api/templates/sunset/preview" alt="Sunset template preview" style={{ width: '100%', borderRadius: 10 }} />
+            <div
+              style={{
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                background: 'var(--bg-elevated)',
+                padding: '12px',
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-mono)'
+              }}
+            >
+              GET /api/og?template=sunset&title=Launch%20Post
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }

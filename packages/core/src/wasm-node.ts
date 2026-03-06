@@ -1,15 +1,27 @@
+/**
+ * @file wasm-node.ts
+ * @description Node.js-specific WASM initialization for Yoga.
+ * @module @og-engine/core
+ */
+
 let initialized = false;
 
+function isInitFunction(value: unknown): value is () => Promise<void> {
+  return typeof value === 'function';
+}
+
+/**
+ * Initializes WASM dependencies required for Node.js rendering.
+ */
 export async function initWasm(): Promise<void> {
   if (initialized) {
     return;
   }
 
-  // yoga (flexbox engine used by satori)
   const yoga = await import('yoga-wasm-web/auto');
-  const init = yoga.default || yoga;
-  if (typeof init === 'function') {
-    await (init as any)();
+  const initMaybe: unknown = yoga.default ?? yoga;
+  if (isInitFunction(initMaybe)) {
+    await initMaybe();
   }
 
   initialized = true;

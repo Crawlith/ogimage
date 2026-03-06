@@ -1,7 +1,7 @@
-import express, { type Request, type Response } from 'express';
 import { nodeAdapter } from '@og-engine/adapter-node';
 import { createHandler } from '@og-engine/core';
-import type { OGRequest, MetaRequest } from '@og-engine/types';
+import type { MetaRequest, OGRequest, PlatformSize } from '@og-engine/types';
+import express, { type Request, type Response } from 'express';
 
 const app = express();
 const port = process.env.PORT ?? 3000;
@@ -12,6 +12,33 @@ const adapter = nodeAdapter({
 });
 
 const handler = createHandler({ platform: adapter });
+const PLATFORM_SIZES: ReadonlyArray<PlatformSize> = [
+  'twitter-og',
+  'facebook-og',
+  'linkedin-og',
+  'ig-post',
+  'ig-story',
+  'discord',
+  'whatsapp',
+  'github',
+  'og'
+];
+
+function parseSize(value: unknown): PlatformSize {
+  if (typeof value === 'string' && PLATFORM_SIZES.includes(value as PlatformSize)) {
+    return value as PlatformSize;
+  }
+
+  return 'og';
+}
+
+function parseFormat(value: unknown): OGRequest['format'] {
+  if (value === 'jpeg' || value === 'png') {
+    return value;
+  }
+
+  return 'png';
+}
 
 app.get('/health', (_request: Request, response: Response) => {
   response.json({ ok: true });
@@ -19,16 +46,16 @@ app.get('/health', (_request: Request, response: Response) => {
 
 app.get('/api/og', async (req: Request, res: Response) => {
   try {
-    const { template, size = 'og', format = 'png', ...params } = req.query;
+    const { template, size, format, ...params } = req.query;
 
-    if (!template) {
+    if (!template || typeof template !== 'string') {
       return res.status(400).send('Missing template parameter');
     }
 
     const ogReq: OGRequest = {
-      template: template as string,
-      size: size as any,
-      format: format as any,
+      template,
+      size: parseSize(size),
+      format: parseFormat(format),
       params: params as Record<string, string>
     };
 
@@ -40,22 +67,21 @@ app.get('/api/og', async (req: Request, res: Response) => {
     });
     res.send(buffer);
   } catch (error) {
-    console.error('Render error:', error);
     res.status(500).send(error instanceof Error ? error.message : 'Internal Server Error');
   }
 });
 
 app.get('/api/meta', async (req: Request, res: Response) => {
   try {
-    const { template, size = 'og', ...params } = req.query;
+    const { template, size, ...params } = req.query;
 
-    if (!template) {
+    if (!template || typeof template !== 'string') {
       return res.status(400).send('Missing template parameter');
     }
 
     const metaReq: MetaRequest = {
-      template: template as string,
-      size: size as any,
+      template,
+      size: parseSize(size),
       params: params as Record<string, string>,
       baseUrl: `${req.protocol}://${req.get('host')}`
     };
@@ -63,11 +89,8 @@ app.get('/api/meta', async (req: Request, res: Response) => {
     const meta = await handler.handleMetaRequest(metaReq);
     res.json(meta);
   } catch (error) {
-    console.error('Meta error:', error);
     res.status(500).send(error instanceof Error ? error.message : 'Internal Server Error');
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
+app.listen(port);

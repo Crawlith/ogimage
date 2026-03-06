@@ -1,9 +1,10 @@
 import { sandboxedRender } from '@og-engine/sandbox';
 import { PLATFORM_SIZES, type OGRequest, type OGTemplate } from '@og-engine/types';
+import satori from 'satori';
 import { buildCacheKey } from './cache-key.js';
 import type { FontConfig } from './fonts.js';
 import { coerceParams } from './params.js';
-import { initWasm } from './wasm.js';
+import { getResvg, initWasm } from './wasm.js';
 
 export interface RenderResult {
   buffer: Buffer;
@@ -21,21 +22,34 @@ export async function render(
   await initWasm();
 
   const { width, height } = PLATFORM_SIZES[req.size];
+
+  // 1. Coerce raw string params into typed params
   const typedParams = coerceParams(req.params, template.schema);
 
-  void fonts.length;
-
-  await sandboxedRender(template, {
+  // 2. Render JSX via template.render() inside sandbox
+  const element = await sandboxedRender(template, {
     ...typedParams,
     width,
     height,
     size: req.size
   });
 
-  const placeholder = `Rendered template ${template.id} at ${width}x${height}`;
+  // 3. Satori: JSX -> SVG
+  const svg = await satori(element as any, {
+    width,
+    height,
+    fonts
+  });
+
+  // 4. resvg: SVG -> PNG
+  const ResvgClass = await getResvg();
+  const resvg = new ResvgClass(svg, {
+    fitTo: { mode: 'width', value: width }
+  });
+  const png = resvg.render().asPng();
 
   return {
-    buffer: Buffer.from(placeholder),
+    buffer: Buffer.from(png),
     contentType: 'image/png',
     width,
     height,

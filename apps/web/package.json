@@ -7,9 +7,23 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "test": "node -e \"console.log('no tests')\""
+    "test": "node -e \"console.log('no tests')\"",
+    "dev": "next dev"
   },
   "dependencies": {
-    "@og-engine/types": "workspace:*"
+    "@og-engine/adapter-node": "workspace:^",
+    "@og-engine/core": "workspace:^",
+    "@og-engine/types": "workspace:*",
+    "framer-motion": "^12.35.0",
+    "lucide-react": "^0.577.0",
+    "next": "^16.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8"
   }
 }

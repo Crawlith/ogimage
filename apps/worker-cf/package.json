@@ -14,5 +14,8 @@
     "@og-engine/core": "workspace:*",
     "@og-engine/types": "workspace:*",
     "hono": "^4.7.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0"
   }
 }

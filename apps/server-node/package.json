@@ -12,6 +12,7 @@
   "dependencies": {
     "@og-engine/adapter-node": "workspace:*",
     "@og-engine/core": "workspace:*",
+    "@og-engine/types": "workspace:^",
     "express": "^4.21.2"
   }
 }

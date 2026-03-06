@@ -13,3 +13,12 @@ export async function initWasm(): Promise<void> {
   const mod = await import('./wasm-edge.js');
   await mod.initWasm();
 }
+
+export async function getResvg() {
+  if (isNodeRuntime) {
+    const { Resvg } = await import('@resvg/resvg-js');
+    return Resvg;
+  }
+  const { Resvg } = await import('@resvg/resvg-wasm');
+  return Resvg;
+}

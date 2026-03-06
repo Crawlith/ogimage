@@ -13,6 +13,7 @@
   "dependencies": {
     "@og-engine/sandbox": "workspace:*",
     "@og-engine/types": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
     "@resvg/resvg-wasm": "^2.6.2",
     "satori": "^0.12.1",
     "yoga-wasm-web": "^0.3.3"

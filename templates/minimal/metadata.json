@@ -1,10 +1,10 @@
 {
   "id": "minimal",
-  "name": "Minimal",
-  "description": "Simple clean template",
+  "name": "Minimal Swiss",
+  "description": "Refined typographic composition with generous whitespace",
   "author": "og-engine",
-  "version": "1.0.0",
-  "tags": ["minimal", "docs"],
+  "version": "2.0.0",
+  "tags": ["minimal", "swiss", "typography"],
   "supportedSizes": [
     "twitter-og",
     "facebook-og",

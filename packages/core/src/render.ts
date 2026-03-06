@@ -1,4 +1,4 @@
-import { sandboxedRender } from '@og-engine/sandbox';
+import { sandboxedRender } from '@og-engine/internal-sandbox';
 import { PLATFORM_SIZES, type OGRequest, type OGTemplate } from '@og-engine/types';
 import satori from 'satori';
 import { buildCacheKey } from './cache-key.js';

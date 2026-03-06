@@ -1,0 +1,14 @@
+name: Template Security Scan
+on:
+  pull_request:
+    paths: ['templates/**']
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install
+      - name: AST Security Scan
+        run: node scripts/scan-template.mjs

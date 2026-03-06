@@ -1,0 +1,20 @@
+{
+  "id": "dark",
+  "name": "Dark",
+  "description": "Dark neon template",
+  "author": "og-engine",
+  "version": "1.0.0",
+  "tags": ["dark", "neon", "saas"],
+  "supportedSizes": [
+    "twitter-og",
+    "facebook-og",
+    "linkedin-og",
+    "og",
+    "discord",
+    "github",
+    "whatsapp",
+    "ig-post",
+    "ig-story"
+  ],
+  "schema": {}
+}

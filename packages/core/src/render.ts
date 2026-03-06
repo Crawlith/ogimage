@@ -1,3 +1,9 @@
+/**
+ * @file render.ts
+ * @description Core OG image render pipeline (template -> SVG -> PNG).
+ * @module @og-engine/core
+ */
+
 import { sandboxedRender } from '@og-engine/internal-sandbox';
 import { PLATFORM_SIZES, type OGRequest, type OGTemplate } from '@og-engine/types';
 import satori from 'satori';
@@ -6,14 +12,34 @@ import type { FontConfig } from './fonts.js';
 import { coerceParams } from './params.js';
 import { getResvg, initWasm } from './wasm.js';
 
+/**
+ * Successful render output payload.
+ */
 export interface RenderResult {
+  /** Encoded image buffer. */
   buffer: Buffer;
+
+  /** Output MIME type. */
   contentType: 'image/png' | 'image/jpeg';
+
+  /** Output width in pixels. */
   width: number;
+
+  /** Output height in pixels. */
   height: number;
+
+  /** Deterministic request cache key. */
   cacheKey: string;
 }
 
+/**
+ * Renders an OG image from request data and a template.
+ *
+ * @param req - Request payload.
+ * @param template - Template definition.
+ * @param fonts - Satori font definitions.
+ * @returns Rendered image data and metadata.
+ */
 export async function render(
   req: OGRequest,
   template: OGTemplate,
@@ -22,11 +48,8 @@ export async function render(
   await initWasm();
 
   const { width, height } = PLATFORM_SIZES[req.size];
-
-  // 1. Coerce raw string params into typed params
   const typedParams = coerceParams(req.params, template.schema);
 
-  // 2. Render JSX via template.render() inside sandbox
   const element = await sandboxedRender(template, {
     ...typedParams,
     width,
@@ -34,14 +57,13 @@ export async function render(
     size: req.size
   });
 
-  // 3. Satori: JSX -> SVG
-  const svg = await satori(element as any, {
+  const satoriInput = element as unknown as Parameters<typeof satori>[0];
+  const svg = await satori(satoriInput, {
     width,
     height,
     fonts
   });
 
-  // 4. resvg: SVG -> PNG
   const ResvgClass = await getResvg();
   const resvg = new ResvgClass(svg, {
     fitTo: { mode: 'width', value: width }

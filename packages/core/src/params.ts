@@ -1,5 +1,18 @@
+/**
+ * @file params.ts
+ * @description Request parameter coercion and schema validation utilities.
+ * @module @og-engine/core
+ */
+
 import type { TemplateSchema } from '@og-engine/types';
 
+/**
+ * Coerces raw query parameters into typed values based on a template schema.
+ *
+ * @param raw - Raw request params map.
+ * @param schema - Template schema used for coercion and validation.
+ * @returns Coerced parameter object suitable for template rendering.
+ */
 export function coerceParams(
   raw: Record<string, string>,
   schema: TemplateSchema

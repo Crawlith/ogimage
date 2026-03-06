@@ -1,5 +1,18 @@
+/**
+ * @file cache-key.ts
+ * @description Deterministic cache key generation for OG image requests.
+ * @module @og-engine/core
+ */
+
 import type { OGRequest } from '@og-engine/types';
 
+/**
+ * Builds a deterministic SHA-256 cache key from normalized request fields.
+ *
+ * @param req - OG image request payload.
+ * @param templateVersion - Template version used for automatic cache busting.
+ * @returns Lowercase 64-character SHA-256 hex digest.
+ */
 export async function buildCacheKey(req: OGRequest, templateVersion: string): Promise<string> {
   const sorted = Object.entries({
     ...req.params,

@@ -1,0 +1,12 @@
+node_modules
+.pnpm-store
+.turbo
+dist
+coverage
+.wrangler
+.next
+.env
+.env.*
+!.env.example
+.og-cache
+.temp

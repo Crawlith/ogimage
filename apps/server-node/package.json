@@ -1,0 +1,17 @@
+{
+  "name": "@og-engine/server-node",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "node -e \"console.log('no tests')\""
+  },
+  "dependencies": {
+    "@og-engine/adapter-node": "workspace:*",
+    "@og-engine/core": "workspace:*",
+    "express": "^4.21.2"
+  }
+}

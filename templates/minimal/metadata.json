@@ -1,0 +1,20 @@
+{
+  "id": "minimal",
+  "name": "Minimal",
+  "description": "Simple clean template",
+  "author": "og-engine",
+  "version": "1.0.0",
+  "tags": ["minimal", "docs"],
+  "supportedSizes": [
+    "twitter-og",
+    "facebook-og",
+    "linkedin-og",
+    "og",
+    "discord",
+    "github",
+    "whatsapp",
+    "ig-post",
+    "ig-story"
+  ],
+  "schema": {}
+}

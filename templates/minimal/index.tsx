@@ -45,11 +45,11 @@ const template: OGTemplate = {
           justifyContent: 'space-between'
         }}
       >
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           {params.tag && (
             <div
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 padding: '8px 16px',
                 borderRadius: '100px',
                 backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',

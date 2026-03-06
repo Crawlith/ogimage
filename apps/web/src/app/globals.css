@@ -49,5 +49,60 @@ a {
 .gradient-text {
   background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.accent {
+  color: var(--accent);
+}
+
+.docs-content pre {
+  color: var(--muted-foreground);
+}
+
+.docs-content h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  color: white;
+}
+
+.docs-content h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+  color: white;
+}
+
+.docs-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 2rem 0 1rem;
+  color: #60a5fa;
+}
+
+.docs-content code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+
+.docs-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+}
+
+.docs-content th {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 2px solid var(--border);
+  opacity: 0.8;
+}
+
+.docs-content td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }

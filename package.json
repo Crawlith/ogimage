@@ -10,7 +10,9 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "template:preview": "node scripts/generate-preview.mjs",
+    "template:test": "node scripts/render-test.mjs",
+    "template:scan": "node scripts/scan-template.mjs"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.0",
@@ -24,21 +26,11 @@
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.1",
     "globals": "^15.15.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.4.3",
     "prettier": "^3.5.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "turbo": "^2.4.4",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.25.0"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml}": [
-      "prettier --write"
-    ],
-    "*.{ts,tsx,js,mjs,cjs}": [
-      "eslint --fix"
-    ]
   }
 }

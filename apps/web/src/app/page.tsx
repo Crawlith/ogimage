@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Zap, Shield, Share2, Github } from 'lucide-react';
 
 export default function Home() {
@@ -17,17 +18,19 @@ export default function Home() {
                     Zero lock-in, fully extensible, and secure by default.
                 </p>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    <button style={{
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: 'var(--radius)',
-                        background: 'white',
-                        color: 'black',
-                        fontWeight: 600,
-                        border: 'none',
-                        cursor: 'pointer'
-                    }}>
-                        Get Started
-                    </button>
+                    <Link href="/templates">
+                        <button style={{
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: 'var(--radius)',
+                            background: 'white',
+                            color: 'black',
+                            fontWeight: 600,
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}>
+                            Explore Templates
+                        </button>
+                    </Link>
                     <a href="https://github.com/og-engine/og-engine" style={{
                         padding: '0.75rem 1.5rem',
                         borderRadius: 'var(--radius)',

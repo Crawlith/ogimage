@@ -8,7 +8,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
       - run: pnpm install
       - name: AST Security Scan
-        run: node scripts/scan-template.mjs
+        run: |
+          # Get list of changed index.tsx files in templates
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^templates/.*index\.tsx$' || true)
+          if [ -n "$FILES" ]; then
+            for file in $FILES; do
+              pnpm template:scan "$file"
+            done
+          else
+            echo "No template files to scan."
+          fi
+      - name: Render Test
+        run: |
+          # Get list of changed template directories
+          DIRS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^templates/' | cut -d/ -f2 | sort -u || true)
+          if [ -n "$DIRS" ]; then
+            for dir in $DIRS; do
+              if [ -d "templates/$dir" ] && [ "$dir" != "_base" ]; then
+                pnpm template:test "$dir"
+              fi
+            done
+          else
+            echo "No templates to test."
+          fi
+      - name: Upload preview artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-previews
+          path: .temp/previews/*.png

@@ -2,11 +2,11 @@ import type { OGTemplate } from '@og-engine/types';
 
 const template: OGTemplate = {
   id: 'sunset',
-  name: 'Sunset',
-  description: 'Warm gradient template for articles and blog posts',
+  name: 'Sunset Editorial',
+  description: 'Editorial newspaper-inspired composition with serif hierarchy',
   author: 'og-engine',
-  version: '1.0.0',
-  tags: ['gradient', 'warm', 'blog', 'article'],
+  version: '2.0.0',
+  tags: ['editorial', 'serif', 'magazine', 'newsroom'],
   supportedSizes: [
     'twitter-og',
     'facebook-og',
@@ -19,70 +19,115 @@ const template: OGTemplate = {
   ],
   schema: {
     title: { type: 'string', required: true, maxLength: 120 },
-    subtitle: { type: 'text' },
-    author: { type: 'string' },
-    date: { type: 'string' }
+    subtitle: { type: 'string', required: false, maxLength: 200 },
+    author: { type: 'string', required: false },
+    tag: { type: 'string', required: false },
+    date: { type: 'string', required: false }
   },
-  render: (params) => (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-start',
-        background: 'linear-gradient(to bottom right, #ff7e5f, #feb47b)',
-        padding: '60px',
-        color: 'white',
-        fontFamily: 'Noto Sans'
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' }}>
-        <h1
-          style={{
-            fontSize: params.size === 'ig-story' ? '80px' : '96px',
-            fontWeight: 900,
-            lineHeight: 1.1,
-            marginBottom: '20px',
-            textShadow: '0 4px 12px rgba(0,0,0,0.1)'
-          }}
-        >
-          {params.title}
-        </h1>
-        {params.subtitle && (
-          <p
-            style={{
-              fontSize: '32px',
-              opacity: 0.9,
-              maxWidth: '80%',
-              lineHeight: 1.4
-            }}
-          >
-            {params.subtitle}
-          </p>
-        )}
-      </div>
+  render: (params) => {
+    const isStory = params.size === 'ig-story';
+    const isCompact = params.size === 'whatsapp';
 
+    return (
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
           width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.2)',
-          paddingTop: '30px'
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          backgroundColor: '#0a0a0a',
+          color: '#f5f0e8',
+          padding: isCompact ? '20px' : isStory ? '64px' : '54px',
+          fontFamily: 'DM Sans',
+          position: 'relative'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {params.author && (
-            <span style={{ fontSize: '24px', fontWeight: 600 }}>{params.author}</span>
-          )}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0.05,
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, #ffffff 1px, transparent 1px), radial-gradient(circle at 80% 80%, #ffffff 1px, transparent 1px)',
+            backgroundSize: '6px 6px, 8px 8px'
+          }}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              border: '1px solid #c0392b',
+              color: '#c0392b',
+              padding: isCompact ? '3px 8px' : '6px 12px',
+              borderRadius: '999px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              fontSize: isCompact ? 10 : 12,
+              fontWeight: 500
+            }}
+          >
+            {params.tag || 'Feature'}
+          </div>
+          <div style={{ fontSize: isCompact ? 10 : 12, opacity: 0.82 }}>{params.date || 'Today'}</div>
         </div>
-        {params.date && <span style={{ fontSize: '24px', opacity: 0.8 }}>{params.date}</span>}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: isCompact ? '10px' : '20px' }}>
+          <div style={{ height: '2px', width: '100%', backgroundColor: '#c0392b' }} />
+
+          <div
+            style={{
+              fontFamily: 'Playfair Display',
+              fontWeight: 900,
+              fontSize: isCompact ? 34 : isStory ? 96 : 72,
+              lineHeight: 1.05,
+              letterSpacing: '-0.02em'
+            }}
+          >
+            {params.title}
+          </div>
+
+          <div style={{ height: '1px', width: '100%', backgroundColor: 'rgba(245,240,232,0.5)' }} />
+
+          {params.subtitle ? (
+            <div
+              style={{
+                fontFamily: 'DM Sans',
+                fontSize: isCompact ? 14 : isStory ? 28 : 24,
+                lineHeight: 1.35,
+                maxWidth: '92%',
+                opacity: 0.88
+              }}
+            >
+              {params.subtitle}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: '1px solid rgba(245,240,232,0.3)',
+            paddingTop: isCompact ? '8px' : '14px',
+            zIndex: 2
+          }}
+        >
+          <div
+            style={{
+              fontSize: isCompact ? 12 : 16,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase'
+            }}
+          >
+            {params.author || 'Staff Writer'}
+          </div>
+          <div style={{ fontSize: isCompact ? 11 : 14, opacity: 0.75 }}>og-engine</div>
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
   preview: './preview.svg'
 };
 

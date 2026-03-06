@@ -1,5 +1,5 @@
 {
-  "name": "@og-engine/sandbox",
+  "name": "@og-engine/internal-sandbox",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -12,5 +12,6 @@
   },
   "dependencies": {
     "@og-engine/types": "workspace:*"
-  }
+  },
+  "private": true
 }

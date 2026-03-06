@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Settings, Image as ImageIcon, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Settings, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 
 const TEMPLATES = [
     { id: 'sunset', name: 'Sunset', params: ['title', 'subtitle', 'author', 'date'] },

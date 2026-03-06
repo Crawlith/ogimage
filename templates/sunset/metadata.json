@@ -1,10 +1,10 @@
 {
   "id": "sunset",
-  "name": "Sunset",
-  "description": "Warm gradient template for articles and blog posts",
+  "name": "Sunset Editorial",
+  "description": "Editorial newspaper-inspired composition with serif hierarchy",
   "author": "og-engine",
-  "version": "1.0.0",
-  "tags": ["gradient", "warm", "blog", "article"],
+  "version": "2.0.0",
+  "tags": ["editorial", "serif", "magazine", "newsroom"],
   "supportedSizes": [
     "twitter-og",
     "facebook-og",

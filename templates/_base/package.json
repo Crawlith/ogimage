@@ -9,5 +9,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "node -e \"console.log('no tests')\""
-  }
+  },
+  "private": true
 }

@@ -134,6 +134,12 @@ importers:
         specifier: ^4.20250214.0
         version: 4.20260305.1
 
+  internal/sandbox:
+    dependencies:
+      '@og-engine/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+
   packages/adapter-cloudflare:
     dependencies:
       '@cloudflare/workers-types':
@@ -178,9 +184,9 @@ importers:
 
   packages/core:
     dependencies:
-      '@og-engine/sandbox':
+      '@og-engine/internal-sandbox':
         specifier: workspace:*
-        version: link:../sandbox
+        version: link:../../internal/sandbox
       '@og-engine/types':
         specifier: workspace:*
         version: link:../types
@@ -196,12 +202,6 @@ importers:
       yoga-wasm-web:
         specifier: ^0.3.3
         version: 0.3.3
-
-  packages/sandbox:
-    dependencies:
-      '@og-engine/types':
-        specifier: workspace:*
-        version: link:../types
 
   packages/types: {}
 

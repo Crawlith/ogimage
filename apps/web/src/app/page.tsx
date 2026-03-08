@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templates } from '../templates';
-import { PLATFORM_SIZES, type PlatformSize } from '@og-engine/types';
+import { PLATFORM_SIZES, type PlatformSize, type SchemaFieldType } from '@og-engine/types';
 
 export default function EditorPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0].id);
@@ -26,11 +26,12 @@ export default function EditorPage() {
   const currentTemplate = useMemo(() =>
     templates.find(t => t.id === selectedTemplateId) || templates[0],
     [selectedTemplateId]);
+  const schemaEntries = Object.entries(currentTemplate.schema) as [string, SchemaFieldType][];
 
   // Sync default params when template changes
   useEffect(() => {
     const defaults: Record<string, string> = {};
-    Object.entries(currentTemplate.schema).forEach(([key, field]: [string, any]) => {
+    schemaEntries.forEach(([key, field]) => {
       if (field && typeof field === 'object' && 'default' in field && field.default !== undefined) {
         defaults[key] = String(field.default);
       } else {
@@ -169,7 +170,7 @@ export default function EditorPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {Object.entries(currentTemplate.schema).map(([key, field]: [string, any]) => (
+              {schemaEntries.map(([key, field]) => (
                 <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
                     {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -177,7 +178,7 @@ export default function EditorPage() {
 
                   {field.type === 'enum' ? (
                     <div style={{ display: 'flex', background: 'var(--bg-base)', padding: '4px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                      {field.values.map((val: any) => (
+                      {field.values.map((val: string) => (
                         <button
                           key={val}
                           onClick={() => handleParamChange(key, val)}

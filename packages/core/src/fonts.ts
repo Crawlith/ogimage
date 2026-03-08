@@ -4,8 +4,6 @@
  * @module @og-engine/core
  */
 
-import { OGEngineError } from '@og-engine/types';
-
 /**
  * Font definition passed into Satori.
  */
@@ -144,7 +142,7 @@ async function loadGoogleFont(variant: GoogleFontVariant): Promise<FontConfig> {
       weight: variant.weight,
       style: variant.style ?? 'normal'
     };
-  } catch (err) {
+  } catch {
     console.warn(`[Fonts] Google API failed for ${key}, trying fallbacks...`);
 
     // 2. Secondary: GitHub Fallback
@@ -153,7 +151,9 @@ async function loadGoogleFont(variant: GoogleFontVariant): Promise<FontConfig> {
       try {
         const data = await loadFontBinary(githubUrl);
         return { name: variant.family, data, weight: variant.weight, style: variant.style ?? 'normal' };
-      } catch { }
+      } catch (githubError) {
+        console.warn(`[Fonts] GitHub fallback failed for ${key}:`, githubError);
+      }
     }
 
     // 3. Final: Local System Fonts

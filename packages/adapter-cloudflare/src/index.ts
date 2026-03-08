@@ -13,12 +13,12 @@ import type {
 
 import { OGEngineError } from '@og-engine/types';
 
-const registryData = new Map<string, OGTemplate<any>>([
-  [sunset.id, sunset],
-  [minimal.id, minimal],
-  [dark.id, dark],
-  [glass.id, glass],
-  [editorial.id, editorial]
+const registryData = new Map<string, OGTemplate>([
+  [sunset.id, sunset as unknown as OGTemplate],
+  [minimal.id, minimal as unknown as OGTemplate],
+  [dark.id, dark as unknown as OGTemplate],
+  [glass.id, glass as unknown as OGTemplate],
+  [editorial.id, editorial as unknown as OGTemplate]
 ]);
 
 /**

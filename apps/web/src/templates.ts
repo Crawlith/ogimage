@@ -3,9 +3,8 @@ import minimal from '../../../templates/free/minimal';
 import dark from '../../../templates/free/dark';
 import glass from '../../../templates/pro/glass';
 import editorial from '../../../templates/pro/editorial';
-import type { OGTemplate } from '@og-engine/types';
 
-export const templates: OGTemplate<any>[] = [
+export const templates = [
     sunset,
     minimal,
     dark,

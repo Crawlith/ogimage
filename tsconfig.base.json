@@ -12,6 +12,12 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@og-engine/*": [
+        "packages/*/src"
+      ]
+    }
   }
 }

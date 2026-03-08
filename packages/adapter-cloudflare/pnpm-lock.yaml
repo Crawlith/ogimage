@@ -1,0 +1,34 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250214.0
+        version: 4.20260305.1
+      '@og-engine/template-dark':
+        specifier: workspace:*
+        version: link:../../templates/dark
+      '@og-engine/template-minimal':
+        specifier: workspace:*
+        version: link:../../templates/minimal
+      '@og-engine/template-sunset':
+        specifier: workspace:*
+        version: link:../../templates/sunset
+      '@og-engine/types':
+        specifier: workspace:*
+        version: link:../types
+
+packages:
+
+  '@cloudflare/workers-types@4.20260305.1':
+    resolution: {integrity: sha512-835BZaIcgjuYIUqgOWJSpwQxFSJ8g/X1OCZFLO7bmirM6TGmVgIGwiGItBgkjUXXCPrYzJEldsJkuFuK7ePuMw==}
+
+snapshots:
+
+  '@cloudflare/workers-types@4.20260305.1': {}

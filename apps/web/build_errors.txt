@@ -1,0 +1,18 @@
+
+> @og-engine/web@0.1.0 build /home/aarav/Sites/opensource/ogimage/apps/web
+> tsc -p tsconfig.json
+
+src/app/page.tsx(34,24): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(178,20): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(180,24): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(180,41): error TS7006: Parameter 'val' implicitly has an 'any' type.
+src/app/page.tsx(201,23): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(225,23): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(247,43): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(247,70): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(247,113): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(259,24): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(259,51): error TS18046: 'field' is of type 'unknown'.
+src/app/page.tsx(261,57): error TS18046: 'field' is of type 'unknown'.
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @og-engine/web@0.1.0 build: `tsc -p tsconfig.json`
+Exit status 2

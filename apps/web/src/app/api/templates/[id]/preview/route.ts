@@ -7,8 +7,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const previewPath = path.join(process.cwd(), '../../templates', id, 'preview.png');
-  const fallbackPath = path.join(process.cwd(), '../../templates', id, 'preview.svg');
+  const previewPath = path.join(process.cwd(), '../../templates/free', `${id}.preview.png`);
+  const fallbackPath = path.join(process.cwd(), '../../templates/free', `${id}.preview.svg`);
 
   try {
     if (fs.existsSync(previewPath)) {

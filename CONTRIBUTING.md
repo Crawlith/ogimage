@@ -1,63 +1,88 @@
-# Contributing Templates to og-engine
+# Contributing to og-engine 🤝
 
-Thank you for wanting to contribute! og-engine is designed to be easily extensible with new templates.
+First off, thank you for considering contributing to `og-engine`! It's people like you who make this project great.
 
-## Local Setup
+## 🎨 Adding a New Template
 
-1. Fork and clone the repository.
-2. Install dependencies: `pnpm install`
-3. Start the development server: `pnpm dev`
-4. Visit `http://localhost:3000` to see the editor.
+Templates are the heart of `og-engine`. Here is how you can build and submit your own.
 
-## Create a New Template
+### 1. Structure
+Create a new directory in `templates/`:
+```
+templates/my-template/
+├── index.tsx       # Main template logic
+├── package.json    # Metadata
+├── tsconfig.json   # Local types
+└── preview.png     # Generated preview (1200x630)
+```
 
-Templates live in the `templates/` directory.
+### 2. The Template Contract
+Your template must export an object conforming to the `OGTemplate` interface:
 
-1. Create a new directory: `templates/my-template`
-2. Create `metadata.json`:
-   ```json
-   {
-     "id": "my-template",
-     "name": "My Template",
-     "description": "A beautiful new template",
-     "author": "Your Name",
-     "version": "1.0.0",
-     "schema": {
-       "title": { "type": "string", "required": true }
-     },
-     "supportedSizes": ["twitter-og", "og"]
-   }
-   ```
-3. Create `index.tsx`:
-   ```tsx
-   import { OGTemplate } from '@og-engine/types';
+```typescript
+import type { OGTemplate } from '@og-engine/types';
 
-   const template: OGTemplate = {
-     // ... implement render function returning JSX
-   };
-   export default template;
-   ```
+const template: OGTemplate = {
+  id: 'my-template',
+  name: 'My Template',
+  description: 'A brief description',
+  author: 'Your GitHub Username',
+  version: '1.0.0',
+  tags: ['minimal', 'post'],
+  supportedSizes: ['twitter-og', 'ig-post'],
+  schema: {
+    title: { type: 'string', required: true, maxLength: 80 },
+    color: { type: 'color', default: '#ff0000' }
+  },
+  render: (params) => {
+    return (
+      <div style={{ background: params.color, width: '100%', height: '100%' }}>
+        {params.title}
+      </div>
+    );
+  }
+};
 
-## Satori CSS Limitations
+export default template;
+```
 
-Since we use Satori for rendering, there are some CSS limitations:
-- Use `display: flex` — CSS Grid is not supported.
-- No `position: fixed` or `position: sticky`.
-- No `calc()` or `background-clip: text`.
-- All dimensions must be explicit (no `auto` heights on flex children).
+### 3. Satori CSS Limitations
+`og-engine` uses Satori for rendering. Satori only supports a subset of CSS:
+- ✅ Flexbox (mostly)
+- ✅ Absolute positioning
+- ✅ Fonts, Colors, Borders, Opacity
+- ❌ CSS Grid
+- ❌ Advanced Selectors (`:hover`, `:nth-child`)
+- ❌ Most CSS filters
 
-## Security & Performance
-
-Before submitting:
-1. Run `pnpm template:scan templates/my-template/index.tsx`
-   - No `eval`, `fetch`, or filesystem access allowed.
-   - Bundle size must be < 50kb gzipped.
-2. Run `pnpm template:test my-template`
-   - Render time must be < 50ms.
-
-## Generating Preview
-
-Run the following to generate the `preview.png` for the gallery:
+### 4. Verification
+Before opening a PR, run these commands:
 ```bash
+# Verify your template passes the security scan
+pnpm template:scan
+
+# Verify rendering and performance
+pnpm template:test
+
+# Generate your preview image
 pnpm template:preview --id my-template
 ```
+
+## 🛠️ Code Standards
+
+- **Type Safety**: Never use `any`. Use `unknown` with type guards if necessary.
+- **Documentation**: All exported symbols must have JSDoc comments.
+- **Linting**: Run `pnpm lint` before committing.
+- **Errors**: Throw `OGEngineError` for handled exceptions.
+
+## 🐛 Bug Reports
+
+If you've found a bug, please open an issue and include:
+- A clear description of the bug.
+- Steps to reproduce the behavior.
+- The environment (Node version, OS, Adapter used).
+- Any relevant logs or screenshots.
+
+---
+
+Thank you for contributing! 🚀

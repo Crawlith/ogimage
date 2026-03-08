@@ -4,6 +4,17 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "node": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./edge": {
+      "import": "./dist/edge.js",
+      "types": "./dist/edge.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -11,7 +22,6 @@
     "test": "node -e \"console.log('no tests')\""
   },
   "dependencies": {
-    "@og-engine/internal-sandbox": "workspace:*",
     "@og-engine/types": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
     "@resvg/resvg-wasm": "^2.6.2",

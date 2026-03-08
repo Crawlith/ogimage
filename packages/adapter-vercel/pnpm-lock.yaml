@@ -1,0 +1,16 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@og-engine/adapter-node':
+        specifier: workspace:*
+        version: link:../adapter-node
+      '@og-engine/types':
+        specifier: workspace:*
+        version: link:../types

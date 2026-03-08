@@ -26,3 +26,20 @@ export async function initWasm(): Promise<void> {
 
   initialized = true;
 }
+
+interface ResvgLike {
+  render(): { asPng(): Uint8Array };
+}
+
+type ResvgConstructor = new (
+  svg: string | Uint8Array,
+  options?: { fitTo?: { mode: 'width'; value: number } }
+) => ResvgLike;
+
+/**
+ * Resolves Node.js Resvg constructor.
+ */
+export async function getResvg(): Promise<ResvgConstructor> {
+  const { Resvg } = await import('@resvg/resvg-js');
+  return Resvg as unknown as ResvgConstructor;
+}

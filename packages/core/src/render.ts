@@ -4,13 +4,14 @@
  * @module @og-engine/core
  */
 
-import { sandboxedRender } from '@og-engine/internal-sandbox';
 import { PLATFORM_SIZES, type OGRequest, type OGTemplate } from '@og-engine/types';
 import satori from 'satori';
 import { buildCacheKey } from './cache-key.js';
 import type { FontConfig } from './fonts.js';
+import { processImageParams } from './images.js';
 import { coerceParams } from './params.js';
 import { getResvg, initWasm } from './wasm.js';
+
 
 /**
  * Successful render output payload.
@@ -49,13 +50,29 @@ export async function render(
 
   const { width, height } = PLATFORM_SIZES[req.size];
   const typedParams = coerceParams(req.params, template.schema);
+  const processedParams = await processImageParams(typedParams, template.schema);
 
-  const element = await sandboxedRender(template, {
-    ...typedParams,
-    width,
-    height,
-    size: req.size
-  });
+  /**
+   * Template rendering with a 50ms timeout.
+   * This is inlined instead of a separate sandbox package for performance and simplicity.
+   * Template renders are expected to be pure and fast.
+   */
+  const timeoutMs = 50;
+  const element = await Promise.race([
+    Promise.resolve().then(() => template.render({
+      ...processedParams,
+      width,
+      height,
+      size: req.size
+    } as never)),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Template render timeout: ${template.id}`)), timeoutMs);
+    })
+  ]) as JSX.Element;
+
+  if (!element || typeof element !== 'object') {
+    throw new Error(`Template ${template.id} returned invalid JSX`);
+  }
 
   const satoriInput = element as unknown as Parameters<typeof satori>[0];
   const svg = await satori(satoriInput, {

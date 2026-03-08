@@ -12,11 +12,14 @@
     "format": "prettier --write .",
     "template:preview": "node scripts/generate-preview.mjs",
     "template:test": "node scripts/render-test.mjs",
-    "template:scan": "node scripts/scan-template.mjs"
+    "template:scan": "node scripts/scan-template.mjs",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.0",
     "@babel/traverse": "^7.29.0",
+    "@changesets/cli": "^2.30.0",
     "@eslint/js": "^9.21.0",
     "@types/express": "^5.0.6",
     "@types/node": "^20.17.19",

@@ -1,181 +1,203 @@
-# og-engine — Claude Code Agent Task Document
+# og-engine — Public Repo Tasks (OSS)
 
-> Full build spec for an open-source, platform-agnostic OG image generation engine.
-> Every decision from the architecture session is captured here.
-> Work through tasks in order. Each task has acceptance criteria — do not move on until they pass.
-
----
-
-## Project Overview
-
-**What:** An open-source social image generation API. Users point a URL at it, get back a PNG/JPEG. Social crawlers (Twitter, LinkedIn, Slack, iMessage, Facebook) fetch it and render rich preview cards.
-
-**Primary deploy target:** Cloudflare Workers (Hono + KV + R2 + D1)
-**Also must work on:** Vercel (Edge + Node), Railway/VPS (Node/Express), Docker
-
-**Core design rules:**
-- Zero platform lock-in — adapter pattern separates core from infrastructure
-- Template system is extensible — OSS contributors add templates via Git PR
-- Every template is sandboxed — no eval, no network, no filesystem access
-- Cache is immutable — URL = cache key, pre-generation on metadata fetch
-- Form-based editor UI with live debounced preview
+> **Repository:** github.com/og-engine/og-engine (public, MIT)
+> **Golden rule:** Tests must pass after every subtask. Commit after each subtask.
+> Never delete before replacement is in place and tested.
 
 ---
 
-## Monorepo Structure (create this exactly)
+## TASK 1 — Repo Restructure
 
+### Target structure
 ```
 og-engine/
-├── package.json                  ← pnpm workspace root
-├── pnpm-workspace.yaml
-├── turbo.json
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                ← lint, typecheck, test
-│       └── template-scan.yml     ← security scan for template PRs
 ├── packages/
-│   ├── types/                    ← shared TypeScript interfaces (no deps)
-│   ├── core/                     ← render pipeline (no platform code)
-│   ├── sandbox/                  ← template execution sandbox
-│   ├── adapter-cloudflare/       ← CF KV + R2 + D1 adapter
-│   ├── adapter-vercel/           ← Vercel/S3/Redis adapter
-│   └── adapter-node/             ← Node/Express/memory adapter
-├── apps/
-│   ├── worker-cf/                ← Cloudflare Workers entry point
-│   ├── server-node/              ← Express entry point (Railway/Docker)
-│   └── web/                      ← Next.js editor UI + docs
-└── templates/
-    ├── _base/                    ← base template type + helpers
-    ├── sunset/                   ← built-in template #1
-    ├── minimal/                  ← built-in template #2
-    └── dark/                     ← built-in template #3
+│   ├── sdk/
+│   ├── core/
+│   ├── types/
+│   ├── adapter-cloudflare/
+│   ├── adapter-node/
+│   └── adapter-vercel/
+├── templates/
+│   ├── free/
+│   │   ├── sunset.tsx
+│   │   ├── sunset.preview.png
+│   │   ├── minimal.tsx
+│   │   ├── minimal.preview.png
+│   │   ├── dark.tsx
+│   │   └── dark.preview.png
+└── apps/
+    └── web/
 ```
 
----
+### Subtask 1.1 — Remove sandbox package
+- Inline the 10-line timeout wrapper directly into `packages/core/src/render.ts`
+- Document it with a JSDoc block explaining why it's not a separate package
+- Delete `packages/sandbox/` after verifying tests pass
+- Run `pnpm test && pnpm typecheck`
 
-## TASK 1 — Monorepo Bootstrap
+### Subtask 1.2 — Flatten templates to files
+- Convert each template from a package to a single `.tsx` file
+- Move to `templates/free/` or `templates/pro/`
+- Remove all `package.json`, `tsconfig.json` from template directories
+- Update `pnpm-workspace.yaml` — remove `templates/*` from workspaces
+- Update `apps/web` and `apps/worker-cf` imports to point at files directly
+- Run full test suite
 
-**Goal:** Working monorepo with TypeScript, linting, and build pipeline.
+### Subtask 1.3 — Remove apps/worker-cf from public repo
+- This moves to the private repo
+- Before deleting: verify `packages/core` and all adapters are fully self-contained
+- Delete `apps/worker-cf/`
+- Verify `pnpm build` still works for all remaining packages
 
-### Subtask 1.1 — Init workspace
-- Init with `pnpm` workspaces
-- Add `turbo.json` with pipelines: `build`, `dev`, `lint`, `typecheck`, `test`
-- Root `package.json` with scripts: `dev`, `build`, `lint`, `format`
-- `.gitignore` covering node_modules, dist, .wrangler, .next, .env*
-- `.nvmrc` pinned to Node 20
+### Subtask 1.4 — Update pnpm-workspace.yaml
+```yaml
+packages:
+  - 'packages/*'
+  - 'apps/*'
+```
 
-### Subtask 1.2 — TypeScript base config
-- Root `tsconfig.base.json`:
-  - `strict: true`
-  - `moduleResolution: bundler`
-  - `target: ES2022`
-  - `jsx: react-jsx`
-- Each package extends base config
+### Subtask 1.5 — Fix turbo.json (Turbo 2.x syntax)
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {
+      "outputs": []
+    }
+  }
+}
+```
 
-### Subtask 1.3 — Linting & formatting
-- ESLint flat config (eslint.config.mjs) at root
-- Prettier config
-- Add eslint rules: `no-eval`, `no-new-func`, `no-implied-eval`
-- Husky + lint-staged for pre-commit
+### Subtask 1.6 — Update all package.json names
+- `packages/sdk`               → `@og-engine/sdk`
+- `packages/core`              → `@og-engine/core`
+- `packages/types`             → `@og-engine/types`
+- `packages/adapter-cloudflare`→ `@og-engine/adapter-cloudflare`
+- `packages/adapter-node`      → `@og-engine/adapter-node`
+- `packages/adapter-vercel`    → `@og-engine/adapter-vercel`
+- `apps/web`                   → `@og-engine/web`, `"private": true`
 
-### Subtask 1.4 — CI workflow
-- `.github/workflows/ci.yml`: on push + PR, run typecheck → lint → test → build
-- Node 20, pnpm cache
+### Subtask 1.7 — Verify
+```bash
+pnpm install
+pnpm build
+pnpm typecheck
+pnpm test
+pnpm --filter @og-engine/web dev  # must start clean
+```
 
-**Acceptance:** `pnpm build` runs without errors across all packages.
+**Acceptance:** All commands pass. No `packages/sandbox`. No `apps/worker-cf`. Templates are `.tsx` files only.
 
 ---
 
 ## TASK 2 — packages/types
 
-**Goal:** All shared TypeScript interfaces. No runtime code. No dependencies.
+**All shared interfaces. Zero runtime code. Zero dependencies.**
 
-### Subtask 2.1 — Platform size definitions
-
+### Subtask 2.1 — Platform sizes
 ```typescript
-// Every supported social platform size
+/**
+ * @file platform-sizes.ts
+ * @description Supported social platform image dimensions.
+ */
+
 export const PLATFORM_SIZES = {
-  'twitter-og':   { width: 1200, height: 628,  label: 'Twitter / X' },
-  'facebook-og':  { width: 1200, height: 630,  label: 'Facebook OG' },
-  'linkedin-og':  { width: 1200, height: 627,  label: 'LinkedIn' },
-  'ig-post':      { width: 1080, height: 1080, label: 'Instagram Post' },
-  'ig-story':     { width: 1080, height: 1920, label: 'Instagram Story' },
-  'discord':      { width: 1280, height: 640,  label: 'Discord' },
-  'whatsapp':     { width: 400,  height: 209,  label: 'WhatsApp' },
-  'github':       { width: 1280, height: 640,  label: 'GitHub Social' },
-  'og':           { width: 1200, height: 630,  label: 'Generic OG (default)' },
+  'twitter-og':  { width: 1200, height: 628,  label: 'Twitter / X' },
+  'facebook-og': { width: 1200, height: 630,  label: 'Facebook OG' },
+  'linkedin-og': { width: 1200, height: 627,  label: 'LinkedIn' },
+  'ig-post':     { width: 1080, height: 1080, label: 'Instagram Post' },
+  'ig-story':    { width: 1080, height: 1920, label: 'Instagram Story' },
+  'discord':     { width: 1280, height: 640,  label: 'Discord' },
+  'whatsapp':    { width: 400,  height: 209,  label: 'WhatsApp' },
+  'github':      { width: 1280, height: 640,  label: 'GitHub Social' },
+  'og':          { width: 1200, height: 630,  label: 'Generic OG (default)' },
 } as const;
 
 export type PlatformSize = keyof typeof PLATFORM_SIZES;
 ```
 
 ### Subtask 2.2 — Template schema types
-
 ```typescript
-// Field types a template can declare
 export type SchemaFieldType =
   | { type: 'string';  required?: boolean; default?: string; maxLength?: number }
-  | { type: 'text';    required?: boolean; default?: string }       // multiline
-  | { type: 'image';   required?: boolean }                         // URL → base64
-  | { type: 'color';   required?: boolean; default?: string }       // hex color
+  | { type: 'text';    required?: boolean; default?: string }
+  | { type: 'image';   required?: boolean }
+  | { type: 'color';   required?: boolean; default?: string }
   | { type: 'boolean'; required?: boolean; default?: boolean }
   | { type: 'enum';    required?: boolean; values: string[]; default?: string };
 
 export type TemplateSchema = Record<string, SchemaFieldType>;
-
-export type InferParams<S extends TemplateSchema> = {
-  [K in keyof S]: S[K] extends { type: 'string' } ? string
-    : S[K] extends { type: 'text' } ? string
-    : S[K] extends { type: 'color' } ? string
-    : S[K] extends { type: 'boolean' } ? boolean
-    : S[K] extends { type: 'image' } ? string | undefined
-    : S[K] extends { type: 'enum'; values: infer V extends string[] } ? V[number]
-    : never;
-};
 ```
 
 ### Subtask 2.3 — OGTemplate interface
-
 ```typescript
+/** Tier controls access on the hosted API. Self-hosters have no restrictions. */
+export type TemplateTier = 'free' | 'pro';
+
 export interface OGTemplate<S extends TemplateSchema = TemplateSchema> {
+  /** Unique identifier used in URL: ?template=sunset */
   id: string;
+  /** Human-readable display name */
   name: string;
+  /** One sentence description shown in the gallery */
   description: string;
+  /** GitHub username of the author */
   author: string;
-  version: string;                         // semver
-  tags?: string[];                         // e.g. ['minimal', 'dark', 'tech']
-  supportedSizes: PlatformSize[];          // which sizes this template supports
+  /** Semver. Bumping this invalidates all cached images for this template. */
+  version: string;
+  /** free = available to all, pro = requires paid key on hosted API */
+  tier: TemplateTier;
+  /** Searchable tags for the gallery */
+  tags?: string[];
+  /** Only declare sizes you have tested and verified */
+  supportedSizes: PlatformSize[];
+  /** Parameter schema — drives the editor form automatically */
   schema: S;
+  /** Pure render function. Must be deterministic. No side effects. No async. */
   render: (params: InferParams<S> & RenderContext) => JSX.Element;
-  preview?: string;                        // relative path to preview.png
 }
 
 export interface RenderContext {
+  /** Pixel width of the output image */
   width: number;
+  /** Pixel height of the output image */
   height: number;
+  /** The platform size key */
   size: PlatformSize;
 }
 ```
 
 ### Subtask 2.4 — Adapter interfaces
-
 ```typescript
-// Storage — for generated PNG files
 export interface StorageAdapter {
   get(key: string): Promise<Buffer | null>;
   put(key: string, value: Buffer, options?: { contentType?: string }): Promise<void>;
   delete(key: string): Promise<void>;
-  url(key: string): string;               // public URL for the stored file
+  /** Returns the public URL for a stored object */
+  url(key: string): string;
 }
 
-// Cache — for key→value fast lookup (KV, Redis, memory)
 export interface CacheAdapter {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttl?: number): Promise<void>;
   delete(key: string): Promise<void>;
 }
 
-// Template registry — where templates come from
 export interface TemplateRegistryAdapter {
   list(): Promise<TemplateMetadata[]>;
   get(id: string): Promise<OGTemplate>;
@@ -189,21 +211,23 @@ export interface PlatformAdapter {
 }
 ```
 
-### Subtask 2.5 — Request/Response types
-
+### Subtask 2.5 — Request/response types
 ```typescript
 export interface OGRequest {
   template: string;
   size: PlatformSize;
-  params: Record<string, string>;          // raw query string params
+  params: Record<string, string>;
   format?: 'png' | 'jpeg';
-  quality?: number;                        // jpeg quality 1–100
-  ttl?: number;                            // cache TTL override in seconds
+  quality?: number;
+  ttl?: number;
+  /** Whether to skip watermark — set by private app after key validation */
+  skipWatermark?: boolean;
 }
 
 export interface MetaRequest extends OGRequest {
-  format?: 'json' | 'html';
-  baseUrl: string;                         // for building absolute og:image URL
+  outputFormat?: 'json' | 'html';
+  /** Absolute base URL for building og:image URL */
+  baseUrl: string;
 }
 
 export interface MetaResponse {
@@ -217,1097 +241,642 @@ export interface MetaResponse {
 }
 ```
 
-**Acceptance:** `pnpm typecheck` passes with zero errors. No runtime code in this package.
+### Subtask 2.6 — Error types
+```typescript
+export type OGErrorCode =
+  | 'TEMPLATE_NOT_FOUND'
+  | 'INVALID_PARAM'
+  | 'RENDER_TIMEOUT'
+  | 'RENDER_FAILED'
+  | 'STORAGE_ERROR'
+  | 'INVALID_SIZE'
+  | 'SSRF_BLOCKED'
+  | 'RATE_LIMITED'
+  | 'MISSING_KEY'
+  | 'INVALID_KEY';
+
+export class OGEngineError extends Error {
+  constructor(
+    message: string,
+    public readonly code: OGErrorCode,
+    public readonly status: number = 500
+  ) {
+    super(message);
+    this.name = 'OGEngineError';
+  }
+}
+```
+
+**Acceptance:** `pnpm typecheck` passes. Zero runtime code. Zero dependencies.
 
 ---
 
 ## TASK 3 — packages/core
 
-**Goal:** The render pipeline. Platform-agnostic. Depends only on `@og-engine/types`, `satori`, and `@resvg/resvg-wasm`.
+**Render pipeline. No platform code. No adapter imports.**
 
-### Subtask 3.1 — Dependencies
-
-Install in packages/core:
-```
-satori
-@resvg/resvg-wasm
-yoga-wasm-web
-@og-engine/types (workspace)
-```
-
-### Subtask 3.2 — WASM initializer
+### Subtask 3.1 — WASM initializer
 
 ```typescript
-// src/wasm.ts
-// WASM loads once per isolate/process lifetime — lazy singleton
+/**
+ * @file wasm.ts
+ * @description Lazy WASM initialization for Satori and resvg.
+ *
+ * WASM compiles once per isolate/process lifetime (~150-200ms overhead).
+ * All subsequent renders on the same instance pay 0ms WASM cost.
+ *
+ * Runtime detection: CF Workers (Edge) vs Node.js use different binaries.
+ */
 
 let initialized = false;
 
-export async function initWasm() {
+export async function initWasm(): Promise<void> {
   if (initialized) return;
-
-  // yoga (flexbox engine used by satori)
-  const { default: initYoga } = await import('yoga-wasm-web/auto');
-  await initYoga();
-
-  // resvg
-  const { initWasm: initResvg } = await import('@resvg/resvg-wasm');
-  // fetch from CDN or R2 — pass the wasm binary
-  await initResvg(fetch('https://unpkg.com/@resvg/resvg-wasm/index_bg.wasm'));
-
+  // Edge runtime: use WASM binaries
+  // Node runtime: use native binaries (faster, no WASM overhead)
+  // Detect via typeof process
   initialized = true;
 }
 ```
 
-**Important notes for agent:**
-- On CF Workers: use WASM imports via the wrangler config (`[[wasm_modules]]`)
-- On Node: use the native binary (`@resvg/resvg-js`) — detect via `typeof process !== 'undefined' && process.versions?.node`
-- Create `src/wasm-node.ts` and `src/wasm-edge.ts` and export the right one based on runtime detection
+### Subtask 3.2 — Font manager
 
-### Subtask 3.3 — Font manager
+Built-in fonts (loaded from CDN on first use, cached in memory forever):
+- `Playfair Display` 400, 700, 900
+- `Instrument Serif` 400 italic
+- `JetBrains Mono` 400, 700
+- `DM Sans` 400, 500
+- `Noto Emoji` 400 — **critical, emojis render as blank boxes without this**
 
 ```typescript
-// src/fonts.ts
-// Fonts must be ArrayBuffer for satori. Never load per-request.
-
-export interface FontConfig {
-  name: string;
-  data: ArrayBuffer;
-  weight?: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-  style?: 'normal' | 'italic';
-}
-
-// Built-in fonts to bundle (load from CDN on first use, cache in memory):
-// - Inter (400, 700)
-// - JetBrains Mono (400, 700)
-// - Geist (400, 700)
-// - Noto Emoji (for emoji support — critical, without this emojis = blank boxes)
-
-const fontCache = new Map<string, ArrayBuffer>();
-
-export async function loadFont(name: string, url: string): Promise<FontConfig> {
-  if (!fontCache.has(url)) {
-    const res = await fetch(url);
-    fontCache.set(url, await res.arrayBuffer());
-  }
-  return { name, data: fontCache.get(url)!, weight: 400 };
-}
-
-export async function getDefaultFonts(): Promise<FontConfig[]> {
-  // Load Inter + Noto Emoji as minimum viable set
-  // ...
-}
+/**
+ * @file fonts.ts
+ * @description Font loading and caching for Satori.
+ *
+ * Satori requires fonts as ArrayBuffer — it cannot use CSS font-face URLs.
+ * Fonts are fetched once per isolate and cached in memory.
+ *
+ * IMPORTANT: Each font adds to Worker memory. The full default set
+ * is approximately 4MB. Noto Emoji alone is ~2MB but is required
+ * for correct emoji rendering.
+ */
 ```
 
-### Subtask 3.4 — Cache key builder
+### Subtask 3.3 — Cache key builder
 
 ```typescript
-// src/cache-key.ts
-// Deterministic cache key from request params
-// IMPORTANT: template version is included so cache auto-invalidates on template update
-
-export function buildCacheKey(req: OGRequest, templateVersion: string): string {
-  const sorted = Object.entries({
-    ...req.params,
-    template: req.template,
-    size: req.size,
-    format: req.format ?? 'png',
-    _tv: templateVersion,             // template version — auto-busts cache on update
-  })
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-    .join('&');
-
-  // Use Web Crypto API (works on CF Workers + Node 18+)
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sorted));
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+/**
+ * Builds a deterministic SHA-256 cache key from request parameters.
+ *
+ * Key includes:
+ * - All user params (sorted for determinism)
+ * - Template version (invalidates cache on template update)
+ * - Watermark state (watermarked and clean images are cached separately)
+ *
+ * Uses Web Crypto API (compatible with CF Workers and Node 18+).
+ */
+export async function buildCacheKey(
+  req: OGRequest,
+  templateVersion: string
+): Promise<string>
 ```
 
-### Subtask 3.5 — Render pipeline
+### Subtask 3.4 — Param coercion + validation
 
 ```typescript
-// src/render.ts
+/**
+ * Coerces raw string query params into typed values using the template schema.
+ *
+ * Validates:
+ * - Required fields are present
+ * - String lengths do not exceed maxLength
+ * - Color values match #[0-9a-fA-F]{3,8}
+ * - Enum values are in the declared set
+ * - Boolean values are 'true'/'1' or 'false'/'0'
+ *
+ * @throws {OGEngineError} INVALID_PARAM if validation fails
+ */
+export function coerceParams(
+  raw: Record<string, string>,
+  schema: TemplateSchema
+): Record<string, unknown>
+```
 
-export interface RenderResult {
-  buffer: Buffer;
-  contentType: 'image/png' | 'image/jpeg';
-  width: number;
-  height: number;
-  cacheKey: string;
-}
+### Subtask 3.5 — SSRF protection
 
+```typescript
+/**
+ * Validates an external URL before fetching it.
+ *
+ * Blocks:
+ * - Private IP ranges (10.x, 172.16.x, 192.168.x, 127.x, ::1, 0.0.0.0)
+ * - Non-HTTP/HTTPS protocols
+ * - Files exceeding 5MB (checked via HEAD request before download)
+ *
+ * @throws {OGEngineError} SSRF_BLOCKED if URL is unsafe
+ * @throws {OGEngineError} INVALID_PARAM if file is too large
+ */
+export async function validateImageUrl(url: string): Promise<void>
+```
+
+### Subtask 3.6 — Render function
+
+```typescript
+/**
+ * Core render function. Converts an OG request into a PNG/JPEG buffer.
+ *
+ * Pipeline:
+ * 1. Init WASM (no-op if already initialized)
+ * 2. Coerce and validate params
+ * 3. Process image params (fetch → base64)
+ * 4. Call template.render() with 50ms timeout
+ * 5. Satori: JSX → SVG
+ * 6. resvg: SVG → PNG
+ *
+ * Satori CSS limitations (document in comments near usage):
+ * - No CSS Grid (use flexbox only)
+ * - No position: sticky / fixed
+ * - No overflow: hidden on flex containers
+ * - No calc()
+ * - No ::before / ::after
+ * - All dimensions must be explicit
+ */
 export async function render(
   req: OGRequest,
   template: OGTemplate,
   fonts: FontConfig[]
-): Promise<RenderResult> {
-  await initWasm();
-
-  const { width, height } = PLATFORM_SIZES[req.size];
-  
-  // 1. Coerce raw string params into typed params using template.schema
-  const typedParams = coerceParams(req.params, template.schema);
-
-  // 2. Process image params — fetch external URLs and convert to base64 data URIs
-  //    SSRF protection: block private IP ranges (10.x, 172.16.x, 192.168.x, 127.x, ::1)
-  const processedParams = await processImageParams(typedParams, template.schema);
-
-  // 3. Render JSX via template.render() inside sandbox
-  const element = await sandboxedRender(template, {
-    ...processedParams,
-    width,
-    height,
-    size: req.size,
-  });
-
-  // 4. Satori: JSX → SVG
-  const svg = await satori(element, {
-    width,
-    height,
-    fonts,
-    // Note: satori only supports a subset of CSS
-    // Grid, position:fixed/sticky, calc(), overflow:hidden (some cases) are NOT supported
-    // Document this clearly for template contributors
-  });
-
-  // 5. resvg: SVG → PNG/JPEG
-  const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: width } });
-  const png = resvg.render().asPng();
-
-  return {
-    buffer: Buffer.from(png),
-    contentType: 'image/png',
-    width,
-    height,
-    cacheKey: await buildCacheKey(req, template.version),
-  };
-}
+): Promise<RenderResult>
 ```
 
-### Subtask 3.6 — Core handler (platform-agnostic request handler)
+### Subtask 3.7 — Platform-agnostic handler
 
 ```typescript
-// src/handler.ts
-// This is what every platform adapter wraps
+/**
+ * Creates a platform-agnostic request handler.
+ *
+ * The handler orchestrates the full request lifecycle:
+ * cache check → render → store → return.
+ *
+ * Platform-specific concerns (storage, cache, registry) are
+ * injected via the PlatformAdapter interface.
+ *
+ * @example
+ * ```ts
+ * // Cloudflare Workers
+ * const handler = createHandler({ platform: cloudflareAdapter(bindings) });
+ *
+ * // Node.js (Railway, Docker)
+ * const handler = createHandler({ platform: nodeAdapter() });
+ * ```
+ */
+export function createHandler(deps: HandlerDeps): OGHandler
+```
 
-export interface HandlerDeps {
-  platform: PlatformAdapter;
-  fonts?: FontConfig[];
-}
-
-export function createHandler(deps: HandlerDeps) {
-  return {
-    // GET /api/og
-    async handleImageRequest(req: OGRequest): Promise<{
-      buffer: Buffer;
-      contentType: string;
-      headers: Record<string, string>;
-      fromCache: boolean;
-    }> {
-      // 1. Resolve template
-      const template = await deps.platform.registry.get(req.template);
-      
-      // 2. Build cache key
-      const cacheKey = await buildCacheKey(req, template.version);
-      
-      // 3. Check KV cache first (fastest)
-      const cachedUrl = await deps.platform.cache.get(cacheKey);
-      if (cachedUrl) {
-        const buffer = await deps.platform.storage.get(cacheKey);
-        if (buffer) {
-          return { buffer, contentType: 'image/png', headers: getCacheHeaders(), fromCache: true };
-        }
-      }
-      
-      // 4. Render
-      const fonts = deps.fonts ?? await getDefaultFonts();
-      const result = await render(req, template, fonts);
-      
-      // 5. Store in R2/storage
-      await deps.platform.storage.put(cacheKey, result.buffer, { contentType: result.contentType });
-      
-      // 6. Write to KV cache
-      await deps.platform.cache.set(cacheKey, deps.platform.storage.url(cacheKey));
-      
-      return { buffer: result.buffer, contentType: result.contentType, headers: getCacheHeaders(), fromCache: false };
-    },
-
-    // GET /api/meta
-    async handleMetaRequest(req: MetaRequest): Promise<MetaResponse> {
-      const { width, height } = PLATFORM_SIZES[req.size];
-      const imageUrl = buildOGImageUrl(req);
-
-      const meta: MetaResponse = {
-        'og:image': imageUrl,
-        'og:image:width': String(width),
-        'og:image:height': String(height),
-        'og:image:type': 'image/png',
-        'twitter:card': 'summary_large_image',
-        'twitter:image': imageUrl,
-      };
-
-      // Pre-generate image in background (non-blocking)
-      // Platform must call this — CF uses ctx.waitUntil(), Node uses setImmediate()
-      this.preGenerate(req);
-
-      return meta;
-    },
-
-    // Background pre-generation — called by metadata endpoint
-    async preGenerate(req: OGRequest): Promise<void> {
-      try {
-        await this.handleImageRequest(req);
-      } catch {
-        // Silent fail — pre-generation is best-effort
-      }
-    },
-  };
-}
-
+Cache headers — always immutable:
+```typescript
 function getCacheHeaders(): Record<string, string> {
   return {
     'Cache-Control': 'public, max-age=31536000, immutable',
     'CDN-Cache-Control': 'max-age=31536000',
+    'Vary': 'Accept',
   };
 }
 ```
 
-### Subtask 3.7 — Param coercion + validation
-
+Background pre-generation called by meta endpoint:
 ```typescript
-// src/params.ts
-// Converts raw string query params into typed values based on template schema
-
-export function coerceParams(
-  raw: Record<string, string>,
-  schema: TemplateSchema
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-
-  for (const [key, field] of Object.entries(schema)) {
-    const value = raw[key];
-
-    if (!value) {
-      if (field.required) throw new Error(`Missing required param: ${key}`);
-      if ('default' in field) result[key] = field.default;
-      continue;
-    }
-
-    switch (field.type) {
-      case 'string':
-      case 'text':
-        if ('maxLength' in field && value.length > (field.maxLength ?? 500)) {
-          throw new Error(`Param ${key} exceeds maxLength`);
-        }
-        result[key] = value;
-        break;
-      case 'boolean':
-        result[key] = value === 'true' || value === '1';
-        break;
-      case 'color':
-        if (!/^#[0-9a-fA-F]{3,8}$/.test(value)) throw new Error(`Invalid color: ${key}`);
-        result[key] = value;
-        break;
-      case 'enum':
-        if (!field.values.includes(value)) throw new Error(`Invalid enum value for ${key}`);
-        result[key] = value;
-        break;
-      case 'image':
-        // Value is a URL — will be processed separately by processImageParams
-        result[key] = value;
-        break;
-    }
-  }
-
-  return result;
-}
+/**
+ * Pre-generates and caches an image in the background.
+ *
+ * Called by the /api/meta endpoint so images exist before
+ * any social crawler arrives. Failures are swallowed —
+ * pre-generation is best-effort.
+ *
+ * On CF Workers: wrap in ctx.waitUntil()
+ * On Node: wrap in setImmediate()
+ */
+async preGenerate(req: OGRequest): Promise<void>
 ```
 
-**Acceptance:** `packages/core` builds. `render()` function takes a mock JSX element and returns a Buffer.
+**Acceptance:** `packages/core` builds. `render()` returns a valid Buffer given a mock template.
 
 ---
 
-## TASK 4 — packages/sandbox
+## TASK 4 — packages/adapter-cloudflare
 
-**Goal:** Secure template execution. Templates run their `render()` fn here.
+### Subtask 4.1 — Storage (R2)
+Full implementation of `StorageAdapter` using `R2Bucket`.
 
-### Subtask 4.1 — Why a sandbox
+### Subtask 4.2 — Cache (KV)
+Full implementation of `CacheAdapter` using `KVNamespace`.
 
-Template `render` functions are JSX → JSX Element. They're already in a CF Worker (no fs, no global network). But we still want to:
-- Catch and isolate render errors (one bad template shouldn't crash the worker)
-- Enforce CPU time limit (50ms max per render)
-- Eventually: block unexpected globals
-
-### Subtask 4.2 — Sandbox implementation
-
+### Subtask 4.3 — Template registry
+Static import map at build time. Checks for duplicate IDs at startup and throws hard:
 ```typescript
-// src/index.ts
-
-export async function sandboxedRender(
-  template: OGTemplate,
-  params: Record<string, unknown>
-): Promise<JSX.Element> {
-  const TIMEOUT_MS = 50;
-
-  const result = await Promise.race([
-    Promise.resolve().then(() => template.render(params as any)),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Template render timeout: ${template.id}`)), TIMEOUT_MS)
-    ),
-  ]);
-
-  if (!result || typeof result !== 'object') {
-    throw new Error(`Template ${template.id} returned invalid JSX`);
-  }
-
-  return result;
+// Duplicate ID check — catches contributor mistakes at startup, not silently at runtime
+const ids = templates.map(t => t.id);
+const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
+if (duplicates.length > 0) {
+  throw new Error(`Duplicate template IDs detected: ${duplicates.join(', ')}`);
 }
 ```
 
-### Subtask 4.3 — CI AST scan (for template PRs)
+### Subtask 4.4 — Adapter factory
+```typescript
+export function cloudflareAdapter(bindings: CloudflareBindings): PlatformAdapter
+```
 
-Create `scripts/scan-template.mjs` — run in CI on any new/changed file under `templates/`:
-- Parse template file with `@babel/parser` + `@babel/traverse`
-- Block: `eval`, `Function(`, `new Function`, `setTimeout`, `setInterval`, dynamic `import()`
-- Block globals: `fetch`, `XMLHttpRequest`, `process`, `require`, `__dirname`, `fs`
-- Block: `dangerouslySetInnerHTML`
-- Check bundle size: `esbuild` bundle must be < 50kb gzipped
-- Fail with clear error message showing the line number
-
-**Acceptance:** Scan script rejects a template containing `eval('x')`. Passes clean templates.
+**Acceptance:** All methods typecheck against `PlatformAdapter`. No `any`.
 
 ---
 
-## TASK 5 — packages/adapter-cloudflare
+## TASK 5 — packages/adapter-node
 
-**Goal:** CF Workers implementation of all adapter interfaces.
+### Subtask 5.1 — Storage (filesystem)
+Default: local filesystem. Directory created automatically if missing.
 
-### Subtask 5.1 — Dependencies
-```
-hono
-@cloudflare/workers-types
-@og-engine/types (workspace)
-```
+### Subtask 5.2 — Cache (memory + optional Redis)
+Memory cache as default (zero config). Redis as opt-in via `redisUrl`.
 
-### Subtask 5.2 — Storage adapter (R2)
-
+### Subtask 5.3 — Adapter factory
 ```typescript
-export const cloudflareStorage = (
-  bucket: R2Bucket,
-  publicBaseUrl: string
-): StorageAdapter => ({
-  async get(key) {
-    const obj = await bucket.get(key);
-    if (!obj) return null;
-    return Buffer.from(await obj.arrayBuffer());
-  },
-  async put(key, value, options) {
-    await bucket.put(key, value, {
-      httpMetadata: { contentType: options?.contentType ?? 'image/png' },
-    });
-  },
-  async delete(key) {
-    await bucket.delete(key);
-  },
-  url(key) {
-    return `${publicBaseUrl}/${key}`;
-  },
-});
+export function nodeAdapter(options?: NodeAdapterOptions): PlatformAdapter
 ```
 
-### Subtask 5.3 — Cache adapter (KV)
-
-```typescript
-export const cloudflareCache = (kv: KVNamespace): CacheAdapter => ({
-  async get(key) {
-    return kv.get(key);
-  },
-  async set(key, value, ttl) {
-    await kv.put(key, value, ttl ? { expirationTtl: ttl } : undefined);
-  },
-  async delete(key) {
-    await kv.delete(key);
-  },
-});
-```
-
-### Subtask 5.4 — Template registry adapter
-
-Templates are loaded from a static import map at build time (Git-based registry).
-Dynamic registry (D1) is v2. For v1: bundle all templates into the worker.
-
-```typescript
-// Templates are statically imported — no dynamic loading in v1
-import * as sunsetTemplate from '@og-engine/template-sunset';
-import * as minimalTemplate from '@og-engine/template-minimal';
-import * as darkTemplate from '@og-engine/template-dark';
-
-const REGISTRY = new Map([
-  [sunsetTemplate.default.id, sunsetTemplate.default],
-  [minimalTemplate.default.id, minimalTemplate.default],
-  [darkTemplate.default.id, darkTemplate.default],
-]);
-
-export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
-  async list() {
-    return [...REGISTRY.values()].map(t => ({
-      id: t.id,
-      name: t.name,
-      description: t.description,
-      author: t.author,
-      version: t.version,
-      tags: t.tags ?? [],
-      supportedSizes: t.supportedSizes,
-    }));
-  },
-  async get(id) {
-    const t = REGISTRY.get(id);
-    if (!t) throw new Error(`Template not found: ${id}`);
-    return t;
-  },
-  async exists(id) {
-    return REGISTRY.has(id);
-  },
-});
-```
-
-### Subtask 5.5 — Cloudflare adapter factory
-
-```typescript
-export interface CloudflareBindings {
-  KV: KVNamespace;
-  BUCKET: R2Bucket;
-  PUBLIC_BASE_URL: string;
-}
-
-export function cloudflareAdapter(bindings: CloudflareBindings): PlatformAdapter {
-  return {
-    storage: cloudflareStorage(bindings.BUCKET, bindings.PUBLIC_BASE_URL),
-    cache: cloudflareCache(bindings.KV),
-    registry: cloudflareRegistry(),
-  };
-}
-```
-
-**Acceptance:** All adapter methods type-check against `PlatformAdapter` interface.
+**Acceptance:** Runs in plain Node 20. Stores and retrieves a buffer. Tests pass.
 
 ---
 
-## TASK 6 — packages/adapter-node
+## TASK 6 — packages/adapter-vercel
 
-**Goal:** Node.js implementation. Works on Railway, Docker, any VPS.
-
-### Subtask 6.1 — Storage adapter (filesystem or S3)
-
-```typescript
-// Default: local filesystem (good for Railway, Docker with volume)
-export const fileSystemStorage = (dir: string, baseUrl: string): StorageAdapter => ({
-  async get(key) {
-    try {
-      return await fs.readFile(path.join(dir, key));
-    } catch { return null; }
-  },
-  async put(key, value) {
-    await fs.mkdir(path.dirname(path.join(dir, key)), { recursive: true });
-    await fs.writeFile(path.join(dir, key), value);
-  },
-  async delete(key) {
-    await fs.unlink(path.join(dir, key)).catch(() => {});
-  },
-  url(key) { return `${baseUrl}/${key}`; },
-});
-```
-
-### Subtask 6.2 — Cache adapter (in-memory + optional Redis)
-
-```typescript
-// Memory cache — works zero-config, resets on restart
-export const memoryCache = (): CacheAdapter => {
-  const store = new Map<string, { value: string; expiresAt?: number }>();
-  return {
-    async get(key) {
-      const entry = store.get(key);
-      if (!entry) return null;
-      if (entry.expiresAt && Date.now() > entry.expiresAt) {
-        store.delete(key);
-        return null;
-      }
-      return entry.value;
-    },
-    async set(key, value, ttl) {
-      store.set(key, { value, expiresAt: ttl ? Date.now() + ttl * 1000 : undefined });
-    },
-    async delete(key) { store.delete(key); },
-  };
-};
-
-// Redis cache — export separately, user opts in
-export const redisCache = (redisUrl: string): CacheAdapter => { /* ioredis impl */ };
-```
-
-### Subtask 6.3 — Node adapter factory
-
-```typescript
-export interface NodeAdapterOptions {
-  storageDir?: string;            // default: ./.og-cache
-  baseUrl?: string;               // default: http://localhost:3000
-  redisUrl?: string;              // optional, falls back to memory
-}
-
-export function nodeAdapter(options: NodeAdapterOptions = {}): PlatformAdapter {
-  return {
-    storage: fileSystemStorage(options.storageDir ?? './.og-cache', options.baseUrl ?? ''),
-    cache: options.redisUrl ? redisCache(options.redisUrl) : memoryCache(),
-    registry: staticRegistry(),   // same as CF — static imports
-  };
-}
-```
-
-**Acceptance:** Node adapter runs in a plain `ts-node` script and stores/retrieves a dummy buffer.
+Thin wrapper around node adapter. Documents Upstash Redis + Vercel Blob as recommended storage.
 
 ---
 
-## TASK 7 — packages/adapter-vercel
+## TASK 7 — packages/sdk
 
-**Goal:** Vercel adapter. Thin wrapper — mostly uses node adapter with S3/Redis options since Vercel has Node functions.
+**Zero dependencies. Ships as ESM + CJS.**
 
-### Subtask 7.1 — Implementation
+```typescript
+/**
+ * @file index.ts
+ * @description Zero-dependency SDK for the og-engine hosted API.
+ *
+ * Uses only:
+ * - Native URLSearchParams (URL building)
+ * - Native fetch (Node 18+ / all browsers)
+ * - Native fs/promises (file saving, Node only)
+ *
+ * No runtime dependencies required.
+ */
 
-Same as node adapter but with:
-- S3 storage adapter using `@aws-sdk/client-s3` (for Vercel Blob or any S3)
-- Upstash Redis cache adapter as default recommendation
+/**
+ * Creates an og-engine client pointing at a specific API base URL.
+ *
+ * @param options.baseUrl - API base URL (default: https://api.og-engine.com)
+ * @param options.apiKey  - Optional paid API key (removes watermark)
+ *
+ * @example
+ * ```ts
+ * // Use hosted API (default)
+ * import { generateUrl } from '@og-engine/sdk';
+ * const url = generateUrl({ title: 'Hello', template: 'sunset' });
+ *
+ * // Self-hosted
+ * const og = createClient({ baseUrl: 'https://og.mycompany.com' });
+ * const url = og.generateUrl({ title: 'Hello' });
+ * ```
+ */
+export function createClient(options?: ClientOptions): OGClient
 
-Document in README: "Use `@og-engine/adapter-node` on Vercel Node functions. For Edge Runtime use the CF adapter pattern."
+/** Standalone export using the hosted API. Most users use this. */
+export const { generateUrl, getMetaTags, generate, generateToFile } = createClient();
+```
+
+Framework integration examples in README:
+- Next.js App Router
+- Next.js Pages Router
+- Astro
+- Remix
+- SvelteKit
+
+**Acceptance:** Zero deps in `package.json`. Works in Node 18, browser, CF Workers.
 
 ---
 
-## TASK 8 — templates/ (built-in templates)
+## TASK 8 — Templates
 
-**Goal:** Three production-quality built-in templates. These serve as the reference implementation for contributors.
+### Design rules (read before writing any template code)
 
-### Subtask 8.1 — templates/_base
-
-Create `templates/_base/helpers.tsx`:
-- `truncate(str, maxLength)` — safe text truncation
-- `formatDate(date)` — consistent date formatting
-- `hexToRgb(hex)` — color utilities
-
-### Subtask 8.2 — templates/sunset
-
-A warm gradient template. Good for blog posts, articles.
-
-Schema: `title` (required), `subtitle` (optional), `author` (optional), `date` (optional)
-
-Supported sizes: all except ig-story (too portrait for this layout)
-
-Design: Deep orange/pink gradient background, large white title, smaller subtitle, author bottom-left. Must look good from 400px wide (WhatsApp) to 1280px (GitHub).
-
-### Subtask 8.3 — templates/minimal
-
-Clean white background. Good for developer tools, docs.
-
-Schema: `title` (required), `description` (optional), `logo` (image, optional), `tag` (string, optional), `theme` (enum: light|dark, default: light)
-
-### Subtask 8.4 — templates/dark
-
-Dark background, neon accent. Good for SaaS products, tech.
-
-Schema: `title` (required), `subtitle` (optional), `accent` (color, default: #00D2FF), `author` (optional)
-
-### Subtask 8.5 — Each template must include
-
-- `index.tsx` — the template implementation
-- `preview.png` — 1200×630 static screenshot (used in gallery, avoids rendering on gallery load)
-- `metadata.json`:
-
-```json
-{
-  "id": "sunset",
-  "name": "Sunset",
-  "description": "Warm gradient template for articles and blog posts",
-  "author": "og-engine",
-  "version": "1.0.0",
-  "tags": ["gradient", "warm", "blog", "article"],
-  "supportedSizes": ["twitter-og", "facebook-og", "linkedin-og", "og", "discord", "github", "whatsapp", "ig-post"],
-  "schema": { }
-}
-```
-
-**Critical CSS limitations to handle in templates (Satori subset):**
-- Use `display: flex` everywhere — NO CSS Grid
+**Satori CSS hard limitations — must be respected:**
+- `display: flex` only — NO CSS Grid
 - No `position: sticky` or `position: fixed`
-- No `overflow: hidden` on flex containers (use clip via parent sizing instead)
+- No `overflow: hidden` on flex containers
 - No `calc()`
-- No `::before` / `::after` pseudo-elements
-- No `background-clip: text` (gradient text effect) — workaround: nested divs
-- All dimensions must be explicit (no `auto` heights on flex children)
-- RTL languages (Arabic, Hebrew) have limited support — document as known limitation
+- No `::before` / `::after`
+- No `background-clip: text`
+- All dimensions must be explicit (no `auto` heights)
+- RTL languages (Arabic, Hebrew) — limited support, document as known limitation
 
-**Acceptance:** All three templates render to valid PNG at `twitter-og` and `ig-post` sizes.
+### Subtask 8.1 — `templates/free/sunset.tsx` — Editorial
+
+Direction: newspaper editorial. Stops the scroll.
+
+- Background: deep ink `#0a0a0a`, text: off-white `#f5f0e8`
+- Display font: `Playfair Display` heavy for title
+- Red accent `#c0392b` on horizontal rule only — one element
+- Layout: tag top-right, red rule, large title, thin rule, subtitle, author bottom-left
+
+```typescript
+const sunset: OGTemplate = {
+  id: 'sunset',
+  tier: 'free',
+  supportedSizes: ['twitter-og', 'facebook-og', 'linkedin-og', 'og', 'discord', 'github', 'whatsapp', 'ig-post'],
+  schema: {
+    title:    { type: 'string', required: true,  maxLength: 120 },
+    subtitle: { type: 'string', required: false, maxLength: 200 },
+    author:   { type: 'string', required: false },
+    tag:      { type: 'string', required: false },
+    date:     { type: 'string', required: false },
+  },
+  // ...
+};
+```
+
+### Subtask 8.2 — `templates/free/minimal.tsx` — Swiss International
+
+Direction: typography IS the design. Extreme whitespace.
+
+- Light or dark via `theme` param
+- `Instrument Serif` italic for title, `DM Sans` for labels
+- One accent color (configurable)
+- Title can be huge (80-96px) — deliberate overflow is intentional
+- Logo top-right if provided
+
+### Subtask 8.3 — `templates/free/dark.tsx` — Terminal
+
+Direction: developer tool aesthetic. Raw and sharp.
+
+- True black `#000000`
+- `JetBrains Mono` throughout
+- `>` cursor prefix on title in accent color
+- Dot-grid background (absolute-positioned divs, not CSS pattern — Satori safe)
+- Terminal statusline at bottom
+
+### Subtask 8.4 — `templates/pro/glass.tsx` — Layered depth
+
+Direction: premium SaaS landing page energy. Light and refined.
+
+- Off-white background with subtle layered cards
+- Soft shadows creating depth
+- `Bricolage Grotesque` for title, fine weight
+- Gradient accent bar at top (2px, configurable color)
+- Company logo prominent
+
+### Subtask 8.5 — `templates/pro/editorial.tsx` — Magazine spread
+
+Direction: high-end print magazine. Bold and asymmetric.
+
+- Full bleed with strong typographic grid
+- Large number or category identifier (left side, huge, semi-transparent)
+- Title breaks the grid intentionally
+- `DM Serif Display` for display text
+
+### Subtask 8.6 — Preview generation
+
+After each template is written:
+```bash
+pnpm template:preview --id sunset    # → templates/free/sunset.preview.png
+pnpm template:preview --id minimal
+pnpm template:preview --id dark
+pnpm template:preview --id glass
+pnpm template:preview --id editorial
+```
+
+All previews at `1200×630`. Commit the PNG files.
+
+**Acceptance:** Every template renders at all declared sizes without error. No text overflow. No layout breaks.
 
 ---
 
-## TASK 9 — apps/worker-cf
+## TASK 9 — apps/web (Simple Editor)
 
-**Goal:** Cloudflare Worker entry point. Hono router. Wraps core handler.
+**Scope:** Demo editor only. No auth, no payments, no accounts.
+Points at `NEXT_PUBLIC_API_URL` — works locally against the worker, in production against the hosted API.
 
-### Subtask 9.1 — Dependencies
-```
-hono
-@og-engine/core (workspace)
-@og-engine/adapter-cloudflare (workspace)
-@og-engine/types (workspace)
-```
+### Design system
 
-### Subtask 9.2 — wrangler.toml
-
-```toml
-name = "og-engine"
-main = "src/index.ts"
-compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
-
-[[kv_namespaces]]
-binding = "KV"
-id = "YOUR_KV_ID"
-
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "og-engine-images"
-
-[vars]
-PUBLIC_BASE_URL = "https://your-r2-public-url.com"
-
-# WASM modules — resvg
-[[wasm_modules]]
-# Add resvg wasm binding here
-```
-
-### Subtask 9.3 — Hono router
-
-```typescript
-// src/index.ts
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { createHandler } from '@og-engine/core';
-import { cloudflareAdapter } from '@og-engine/adapter-cloudflare';
-
-type Bindings = { KV: KVNamespace; BUCKET: R2Bucket; PUBLIC_BASE_URL: string; };
-
-const app = new Hono<{ Bindings: Bindings }>();
-
-app.use('*', cors());
-
-// GET /api/og — generate and return image
-app.get('/api/og', async (c) => {
-  const handler = createHandler({
-    platform: cloudflareAdapter({
-      KV: c.env.KV,
-      BUCKET: c.env.BUCKET,
-      PUBLIC_BASE_URL: c.env.PUBLIC_BASE_URL,
-    }),
-  });
-
-  const req = parseOGRequest(c.req.query());
-  const result = await handler.handleImageRequest(req);
-
-  // Pre-generation runs in background via waitUntil (non-blocking)
-  c.executionCtx.waitUntil(Promise.resolve());
-
-  return new Response(result.buffer, {
-    headers: {
-      'Content-Type': result.contentType,
-      ...result.headers,
-      'X-Cache': result.fromCache ? 'HIT' : 'MISS',
-    },
-  });
-});
-
-// GET /api/meta — return OG meta tags + trigger background pre-generation
-app.get('/api/meta', async (c) => {
-  const handler = createHandler({
-    platform: cloudflareAdapter({ KV: c.env.KV, BUCKET: c.env.BUCKET, PUBLIC_BASE_URL: c.env.PUBLIC_BASE_URL }),
-  });
-
-  const req = parseMetaRequest(c.req.query(), c.req.url);
-  const meta = await handler.handleMetaRequest(req);
-
-  // Fire pre-generation in background — image ready before any crawler arrives
-  c.executionCtx.waitUntil(handler.preGenerate(req));
-
-  const format = c.req.query('format') ?? 'json';
-
-  if (format === 'html') {
-    const html = Object.entries(meta)
-      .map(([k, v]) => `<meta property="${k}" content="${v}" />`)
-      .join('\n');
-    return c.text(html, 200, { 'Content-Type': 'text/html' });
-  }
-
-  return c.json(meta);
-});
-
-// GET /api/templates — list available templates
-app.get('/api/templates', async (c) => {
-  const adapter = cloudflareAdapter({ KV: c.env.KV, BUCKET: c.env.BUCKET, PUBLIC_BASE_URL: c.env.PUBLIC_BASE_URL });
-  const templates = await adapter.registry.list();
-  return c.json(templates);
-});
-
-// GET /api/templates/:id — single template schema (for editor form generation)
-app.get('/api/templates/:id', async (c) => {
-  const adapter = cloudflareAdapter({ KV: c.env.KV, BUCKET: c.env.BUCKET, PUBLIC_BASE_URL: c.env.PUBLIC_BASE_URL });
-  const template = await adapter.registry.get(c.req.param('id'));
-  return c.json({ id: template.id, name: template.name, schema: template.schema, supportedSizes: template.supportedSizes });
-});
-
-// Health check
-app.get('/health', (c) => c.json({ ok: true }));
-
-export default app;
-```
-
-### Subtask 9.4 — Query param parser
-
-```typescript
-// src/parse.ts
-function parseOGRequest(query: Record<string, string>): OGRequest {
-  const { template = 'sunset', size = 'og', format = 'png', quality, ttl, ...params } = query;
-
-  if (!(size in PLATFORM_SIZES)) throw new Error(`Unknown size: ${size}`);
-
-  return {
-    template,
-    size: size as PlatformSize,
-    params,
-    format: format as 'png' | 'jpeg',
-    quality: quality ? Number(quality) : undefined,
-    ttl: ttl ? Number(ttl) : undefined,
-  };
+```css
+:root {
+  --bg-base:       #0c0c0e;
+  --bg-surface:    #141416;
+  --bg-elevated:   #1c1c1f;
+  --border-subtle: #242428;
+  --border-default:#2e2e33;
+  --text-primary:  #f0eff2;
+  --text-secondary:#8b8a94;
+  --text-tertiary: #55545e;
+  --accent:        #e8a020;
+  --accent-dim:    rgba(232, 160, 32, 0.12);
+  --font-display:  'Bricolage Grotesque', sans-serif;
+  --font-body:     'Geist', sans-serif;
+  --font-mono:     'Geist Mono', monospace;
+  --radius-md:     8px;
+  --radius-lg:     12px;
 }
 ```
 
-### Subtask 9.5 — Error handling
+### Subtask 9.1 — Layout + navigation
+- 48px nav: logo left, links center, GitHub star right
+- No sidebar — full-width layouts only
 
-All errors return JSON with status code, never crash the worker:
-```json
-{ "error": "Template not found: nonexistent", "status": 404 }
-```
-
-**Acceptance:** `wrangler dev` starts. `GET /api/og?template=sunset&title=Hello` returns a PNG.
-
----
-
-## TASK 10 — apps/server-node
-
-**Goal:** Express server entry point for Railway, Docker, VPS.
-
-### Subtask 10.1 — Express router
-
-Mirrors the Hono router exactly — same routes, same response shapes.
-
-```typescript
-// src/index.ts
-import express from 'express';
-import { createHandler } from '@og-engine/core';
-import { nodeAdapter } from '@og-engine/adapter-node';
-
-const app = express();
-const handler = createHandler({ platform: nodeAdapter({ baseUrl: process.env.BASE_URL }) });
-
-app.get('/api/og', async (req, res) => {
-  const result = await handler.handleImageRequest(parseOGRequest(req.query));
-  // Fire pre-generation is handled synchronously in node (setImmediate)
-  res.set({ 'Content-Type': result.contentType, ...result.headers });
-  res.send(result.buffer);
-});
-
-app.get('/api/meta', async (req, res) => {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const meta = await handler.handleMetaRequest(parseMetaRequest(req.query, baseUrl));
-  // Background pre-generation
-  setImmediate(() => handler.preGenerate(parseOGRequest(req.query)));
-  
-  if (req.query.format === 'html') {
-    const html = Object.entries(meta).map(([k, v]) => `<meta property="${k}" content="${v}" />`).join('\n');
-    return res.type('html').send(html);
-  }
-  res.json(meta);
-});
-
-app.listen(process.env.PORT ?? 3000);
-```
-
-### Subtask 10.2 — Dockerfile
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY . .
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
-RUN pnpm build
-CMD ["node", "apps/server-node/dist/index.js"]
-EXPOSE 3000
-```
-
----
-
-## TASK 11 — apps/web (Editor UI)
-
-**Goal:** Next.js app. Template gallery + form-based editor with live preview + URL builder + docs.
-
-### Subtask 11.1 — Setup
-
-```
-next@15 (app router)
-tailwindcss
-@og-engine/types (workspace)
-```
-
-### Subtask 11.2 — Pages & routes
-
-```
-app/
-├── page.tsx                    ← landing page
-├── templates/
-│   ├── page.tsx                ← template gallery
-│   └── [id]/
-│       └── page.tsx            ← template detail
-├── editor/
-│   └── page.tsx                ← form editor
-├── playground/
-│   └── page.tsx                ← live URL tester
-└── docs/
-    └── [...slug]/
-        └── page.tsx            ← MDX docs
-```
-
-### Subtask 11.3 — Template gallery (app/templates/page.tsx)
-
-- Fetches template list from `GET /api/templates`
-- Displays `TemplateCard` for each
-- `TemplateCard` shows `preview.png` (static — NOT a live render), name, author, tags, supported sizes
+### Subtask 9.2 — Gallery (`/templates`)
+- Static previews only — NEVER hit `/api/og` on gallery load
+- Masonry grid, 3 cols desktop
+- Pro templates show lock icon + "unlock at og-engine.com"
 - Filter by tag, search by name
 
-**Critical:** Use `preview.png` static image in gallery — never hit `/api/og` on gallery load. Rendering all templates would be slow and expensive.
+### Subtask 9.3 — Editor (`/`)
 
-### Subtask 11.4 — Form-based editor (app/editor/page.tsx)
+**Two-panel layout:**
 
-This is the core UI. Build it carefully.
+Left panel (380px, independently scrollable):
+- Template selector (thumbnail + name)
+- Dynamic form from schema:
+  - `string` → input + char counter
+  - `text` → auto-resize textarea
+  - `color` → color swatch + hex input
+  - `enum` → segmented control
+  - `boolean` → toggle
+  - `image` → URL input + thumbnail preview
+- Size selector (platform pills)
+- Font picker
 
-**Layout:** Two-column — form left, preview right.
+Right panel (fills remaining width, sticky):
+- Preview pane — **aspect-ratio locked container, zero layout shift**
+- Checkerboard background for transparency
+- 500ms debounce — never fires on every keystroke
+- Skeleton while loading, error state on failure
+- URL builder below: generated URL + copy button + copy meta tags
+- On copy: silently `fetch(url, { priority: 'low' })` to pre-warm cache
 
-**EditorForm component** — dynamically generates form fields from template schema:
-```typescript
-// Reads template.schema and renders the right input per field type:
-// type: 'string'  → <input type="text" />
-// type: 'text'    → <textarea />
-// type: 'color'   → <input type="color" /> + hex input
-// type: 'boolean' → <Toggle />
-// type: 'enum'    → <Select> with values
-// type: 'image'   → <input type="url" /> (URL input, not file upload for v1)
-//
-// When a new template is contributed with new param types,
-// the form automatically gains new fields — zero UI changes needed
+**Fix: aspect-ratio container (no more offset on title change)**
+```tsx
+<div style={{
+  position: 'relative',
+  width: '100%',
+  paddingTop: `${(height / width) * 100}%`,  // locks ratio
+  overflow: 'hidden',
+}}>
+  <img style={{
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+  }} />
+</div>
 ```
 
-**PreviewPane component:**
-- Shows `<img src={generatedUrl} />` where generatedUrl is built from form state
-- **Debounce all form changes by 500ms** before updating the image src
-  - Without debounce: every keystroke fires a new API call
-- Show loading skeleton while image loads
-- Show error state if API returns error
-- Has a SizeSelector — changing size updates preview dimensions and regenerates
+### Subtask 9.4 — Mobile
+- Stacked layout: preview on top, form below
+- Each section independently scrollable
+- Touch targets minimum 44×44px
 
-**SizeSelector component:**
-- Renders a pill/tab for each platform size
-- Visually shows the aspect ratio as a small rectangle
-- Selecting a size updates the `size=` param in the URL
+### Subtask 9.5 — Micro-interactions
+- Field focus: accent border glow, 150ms
+- Template card hover: `translateY(-3px)` + shadow, 200ms
+- Copy button: scale pulse on click, "✓ Copied" 2s dismiss
+- Preview swap: opacity crossfade 200ms
+- Page load: staggered content reveal
 
-**UrlBuilder component (below the preview):**
-- Shows the generated API URL in a code block
-- "Copy URL" button — on click, copies URL AND silently fires `fetch(url)` to pre-warm the cache
-- "Copy Meta Tags" button — fetches `/api/meta?format=html&...` and copies the HTML snippet
-- "Open in new tab" link
+**Acceptance:** No layout shift on any input change. Lighthouse ≥ 90. `pnpm dev` starts clean.
 
-**FontPicker component:**
-- Dropdown of available fonts (Inter, JetBrains Mono, Geist)
-- Adds `font=` param to URL
+---
 
-### Subtask 11.5 — Playground (app/playground/page.tsx)
+## TASK 10 — OSS Code Quality
 
-- Raw URL input field
-- Paste any `/api/og?...` URL and see the preview
-- Shows all parsed params as a table
-- Good for debugging and sharing
+**Do this across all files in `packages/`. Do not skip any.**
 
-### Subtask 11.6 — Docs (app/docs/)
+### Subtask 10.1 — JSDoc on every exported symbol
+Every exported function, interface, type, constant gets a doc block with `@param`, `@returns`, `@throws`, `@example`. See Task 2 for format.
 
-Use MDX. Create these doc pages:
+### Subtask 10.2 — Zero `any` in packages
+Run `pnpm typecheck`. Fix every `any`. Use `unknown` + type guards where runtime types are genuinely unknown.
 
-1. `getting-started.mdx` — Quick start, point at the hosted API
-2. `api-reference.mdx` — All query params, all endpoints
-3. `platforms.mdx` — Platform sizes table with visual aspect ratio guide
-4. `contributing-templates.mdx` — Full guide: fork → create → schema → render → PR
-5. `self-hosting.mdx` — CF Workers deploy, Docker deploy, Railway deploy
-6. `limitations.mdx` — **Critical page.** Document all known limitations clearly:
-   - Satori CSS subset (no Grid, no calc, no overflow:hidden on flex)
-   - No RTL language support (Arabic, Hebrew limited)
-   - Emoji requires Noto Emoji font — built in but adds 2MB to bundle
-   - WASM first-request overhead (~200ms on cold isolate)
-   - Template bundle max 50kb gzipped
-   - No dynamic/real-time content in cached images (use `ttl` param for expiring cache)
-   - External image URLs must be public (SSRF protection blocks private IPs)
+### Subtask 10.3 — Remove dead code
+Run `npx knip`. Fix every finding. Remove all commented-out code. Remove all `console.log`.
 
-### Subtask 11.7 — Environment config
+### Subtask 10.4 — Explicit barrel exports
+No wildcard `export *` in any `packages/*/src/index.ts`.
 
-```typescript
-// lib/config.ts
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8787';
+### Subtask 10.5 — File-level header comments
+Every source file in `packages/` gets a `@file`, `@description`, `@module` header.
+
+### Subtask 10.6 — ESLint enforcement
+Add and fix all violations:
+```javascript
+'@typescript-eslint/no-explicit-any': 'error',
+'@typescript-eslint/no-unused-vars': 'error',
+'no-console': 'error',
+'no-eval': 'error',
+'no-new-func': 'error',
+'jsdoc/require-jsdoc': ['error', { publicOnly: true }],
 ```
 
-All API calls go through this — makes it easy to point the UI at any deployment.
+### Subtask 10.7 — Per-package READMEs
+Each `packages/*/README.md`: what it does, install, basic usage, API reference.
+
+**Acceptance:** `pnpm lint` zero warnings. `npx knip` zero findings. `pnpm typecheck` zero errors.
 
 ---
 
-## TASK 12 — .github/workflows/template-scan.yml
+## TASK 11 — CI/Release Pipeline
 
-**Goal:** Automated security scan on every PR that touches `templates/`.
-
-```yaml
-name: Template Security Scan
-on:
-  pull_request:
-    paths: ['templates/**']
-
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - name: AST Security Scan
-        run: node scripts/scan-template.mjs ${{ github.event.pull_request.changed_files }}
-      - name: Bundle Size Check
-        run: node scripts/check-bundle-size.mjs
-      - name: Render Test
-        run: node scripts/render-test.mjs  # renders template at all declared sizes, times it
-      - name: Upload preview artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: template-previews
-          path: .temp/previews/*.png
+### Subtask 11.1 — Changesets
+```bash
+pnpm add -DW @changesets/cli && pnpm changeset init
 ```
 
-The uploaded preview PNGs appear on the PR for human review.
+Published: all `packages/*`
+Ignored: `apps/*`
+
+### Subtask 11.2 — Template security scan
+`.github/workflows/template-scan.yml` — triggers on `templates/**` changes:
+- AST scan: block `eval`, `Function(`, dynamic import, `fetch`, `process`, `fs`
+- Bundle size: < 50kb gzipped per template
+- Render test: all declared sizes, < 50ms each
+- Upload preview PNGs as artifacts for human review
+
+### Subtask 11.3 — PR checks
+`.github/workflows/pr.yml` — all PRs:
+- typecheck → lint → test → build
+- Fail fast on typecheck
+
+### Subtask 11.4 — Release workflow
+`.github/workflows/release.yml` — push to main:
+- build → test → publish via changesets action
 
 ---
 
-## TASK 13 — Template Contribution Guide + PR Template
+## TASK 12 — Documentation
 
-### Subtask 13.1 — CONTRIBUTING.md
-
-Cover:
-1. How to fork and set up locally
-2. Template file structure (index.tsx, preview.png, metadata.json)
-3. The OGTemplate interface contract (copy from types)
-4. Satori CSS limitations (important section)
-5. How to generate preview.png (`pnpm template:preview --id your-template`)
-6. PR checklist
-7. Security requirements (what the CI scan checks)
-
-### Subtask 13.2 — .github/PULL_REQUEST_TEMPLATE/template_contribution.md
-
-```markdown
-## New Template: [template-name]
-
-**Template ID:** 
-**Author:** 
-**Tags:** 
-
-### Checklist
-- [ ] index.tsx exports default OGTemplate
-- [ ] metadata.json is complete and valid
-- [ ] preview.png is included (1200×630)
-- [ ] Renders in < 50ms (CI will verify)
-- [ ] Bundle < 50kb gzipped (CI will verify)
-- [ ] No eval, fetch, process, fs usage (CI will verify)
-- [ ] Tested at minimum: twitter-og and og sizes
-- [ ] Added to supportedSizes only sizes that look correct
-
-### Preview
-<!-- CI will upload preview images as artifacts -->
+### Subtask 12.1 — Root README
+```
+# og-engine
+[badges: npm, license, CI]
+## Quick start (5 lines)
+## Templates (3 screenshots)
+## Platform sizes (table)
+## Self-hosting (CF | Railway | Docker)
+## Contributing templates
+## Packages (table with version badges)
+## License: MIT
 ```
 
----
+### Subtask 12.2 — CONTRIBUTING.md
+- How to add a free template
+- The OGTemplate interface
+- Satori CSS limitations (prominent section)
+- How to run CI scan locally
+- PR checklist
+- CLA: "By submitting, you grant og-engine irrevocable license to include this template"
 
-## TASK 14 — scripts/
-
-Helper scripts for development and CI.
-
-### Subtask 14.1 — scripts/scan-template.mjs
-AST scanner using `@babel/parser` + `@babel/traverse`. Details in Task 4.3.
-
-### Subtask 14.2 — scripts/check-bundle-size.mjs
-ESBuild bundle check. Target: < 50kb gzipped per template.
-
-### Subtask 14.3 — scripts/render-test.mjs
-Takes a template ID, renders at all declared sizes, outputs PNGs to `.temp/previews/`, measures time.
-
-### Subtask 14.4 — scripts/generate-preview.mjs
-Convenience script: `pnpm template:preview --id sunset`
-Renders template at `og` size with dummy params from schema defaults → saves as `templates/sunset/preview.png`.
-
----
-
-## TASK 15 — README.md
-
-The root README must cover:
-
-1. **What it is** — one paragraph
-2. **Quick start** — curl example showing the URL API
-3. **Supported platforms table** — all 8 sizes with dimensions
-4. **API reference** — all query params in a table
-5. **Deploy in 5 minutes** — CF Workers, Docker, Railway, Vercel (each as a tab/section)
-6. **Contributing templates** — link to CONTRIBUTING.md
-7. **Known limitations** — link to docs/limitations.mdx
-8. **License** — MIT
-
----
-
-## Global Rules for Agent
-
-- **Never use `any`** in TypeScript except where explicitly noted and commented
-- **Never use `eval`, `Function()`, dynamic import** in core, adapters, or worker code
-- **SSRF protection is non-negotiable** — any code path that fetches a user-provided URL must validate against private IP ranges before fetching
-- **Cache headers are immutable** — every image response gets `Cache-Control: public, max-age=31536000, immutable`
-- **All errors return JSON** `{ error: string, status: number }` — never let exceptions propagate to raw 500s
-- **Platform code never leaks into core** — `packages/core` has zero imports from any adapter package
-- **Debounce editor preview at 500ms** — this is UX critical
-- **Use `crypto.subtle` for hashing** — works on both CF Workers and Node 18+, no dependencies needed
-- **Document Satori limitations prominently** — template contributors will hit these and be confused without docs
-- **`preview.png` in gallery, never live render** — gallery page must not hit `/api/og` for each card
+### Subtask 12.3 — In-app docs (`apps/web/app/docs/`)
+- `getting-started.mdx`
+- `api-reference.mdx`
+- `platforms.mdx`
+- `contributing-templates.mdx`
+- `self-hosting.mdx`
+- `limitations.mdx` — Satori subset, WASM overhead, RTL, emoji
 
 ---
 
 ## Build Order
 
 ```
-1. packages/types          ← no deps, start here
-2. packages/sandbox        ← depends on types
-3. packages/core           ← depends on types + sandbox
-4. packages/adapter-node   ← depends on types + core
-5. packages/adapter-cf     ← depends on types + core
-6. packages/adapter-vercel ← depends on types + core
-7. templates/*             ← depends on types
-8. apps/worker-cf          ← depends on core + adapter-cf + templates
-9. apps/server-node        ← depends on core + adapter-node + templates
-10. apps/web               ← depends on types (API calls only)
+1. packages/types
+2. packages/core
+3. packages/adapter-node
+4. packages/adapter-cloudflare
+5. packages/adapter-vercel
+6. packages/sdk
+7. templates/free/*
+8. templates/pro/*
+9. apps/web
 ```
 
 ---
 
-*End of task document. Every architectural decision from the design session is captured above.*
-*Total scope: ~15 packages/apps, 3 built-in templates, full CI pipeline, editor UI.*
+## Hard Rules
+
+- Tests pass after every subtask commit
+- Never delete before replacement is proven
+- Zero `any` in `packages/`
+- No `console.log` in production code
+- Every exported symbol has a JSDoc block
+- 500ms debounce on preview — always
+- Preview uses aspect-ratio container — no layout shift ever
+- Gallery uses static `preview.png` — never `/api/og` on load
+- Template IDs are checked for duplicates at registry startup
+- `"private": true` on `apps/*`

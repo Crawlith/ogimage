@@ -2,8 +2,8 @@
   "name": "@og-engine/adapter-cloudflare",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/packages/adapter-cloudflare/src/index.js",
+  "types": "dist/packages/adapter-cloudflare/src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -11,10 +11,9 @@
     "test": "node -e \"console.log('no tests')\""
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20250214.0",
-    "@og-engine/types": "workspace:*",
-    "@og-engine/template-dark": "workspace:*",
-    "@og-engine/template-minimal": "workspace:*",
-    "@og-engine/template-sunset": "workspace:*"
+    "@og-engine/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240903.0"
   }
 }

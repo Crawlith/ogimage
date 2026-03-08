@@ -32,12 +32,12 @@ export type PlatformSize = keyof typeof PLATFORM_SIZES;
  * Allowed schema field definitions for template parameters.
  */
 export type SchemaFieldType =
-  | { type: 'string'; required?: boolean; default?: string; maxLength?: number }
-  | { type: 'text'; required?: boolean; default?: string }
-  | { type: 'image'; required?: boolean }
-  | { type: 'color'; required?: boolean; default?: string }
-  | { type: 'boolean'; required?: boolean; default?: boolean }
-  | { type: 'enum'; required?: boolean; values: string[]; default?: string };
+  | { readonly type: 'string'; readonly required?: boolean; readonly default?: string; readonly maxLength?: number }
+  | { readonly type: 'text'; readonly required?: boolean; readonly default?: string }
+  | { readonly type: 'image'; readonly required?: boolean }
+  | { readonly type: 'color'; readonly required?: boolean; readonly default?: string }
+  | { readonly type: 'boolean'; readonly required?: boolean; readonly default?: boolean }
+  | { readonly type: 'enum'; readonly required?: boolean; readonly values: readonly string[]; readonly default?: string };
 
 /**
  * Template parameter schema keyed by parameter name.
@@ -48,19 +48,14 @@ export type TemplateSchema = Record<string, SchemaFieldType>;
  * Derives strongly-typed render params from a template schema.
  */
 export type InferParams<S extends TemplateSchema> = {
-  [K in keyof S]: S[K] extends { type: 'string' }
-    ? string
-    : S[K] extends { type: 'text' }
-      ? string
-      : S[K] extends { type: 'color' }
-        ? string
-        : S[K] extends { type: 'boolean' }
-          ? boolean
-          : S[K] extends { type: 'image' }
-            ? string | undefined
-            : S[K] extends { type: 'enum'; values: infer V extends string[] }
-              ? V[number]
-              : never;
+  [K in keyof S]: S[K] extends { readonly type: infer T }
+    ? T extends 'string' | 'text' ? string
+      : T extends 'color' ? string
+      : T extends 'boolean' ? boolean
+      : T extends 'image' ? string | undefined
+      : T extends 'enum' ? (S[K] extends { readonly values: infer V extends readonly string[] } ? V[number] : string)
+      : never
+    : never
 };
 
 /**
@@ -82,6 +77,9 @@ export interface RenderContext {
   size: PlatformSize;
 }
 
+/** Tier controls access on the hosted API. Self-hosters have no restrictions. */
+export type TemplateTier = 'free' | 'pro';
+
 /**
  * Fully-typed OG template definition.
  */
@@ -100,6 +98,9 @@ export interface OGTemplate<S extends TemplateSchema = TemplateSchema> {
 
   /** Template version string (semver recommended). */
   version: string;
+
+  /** free = available to all, pro = requires paid key on hosted API */
+  tier: TemplateTier;
 
   /** Optional tag list used for filtering and discovery. */
   tags?: string[];
@@ -148,10 +149,10 @@ export interface TemplateMetadata {
  */
 export interface StorageAdapter {
   /** Reads a binary object by storage key. */
-  get(key: string): Promise<Buffer | null>;
+  get(key: string): Promise<Uint8Array | null>;
 
   /** Writes a binary object by storage key. */
-  put(key: string, value: Buffer, options?: { contentType?: string }): Promise<void>;
+  put(key: string, value: Uint8Array, options?: { contentType?: string }): Promise<void>;
 
   /** Removes a binary object by storage key. */
   delete(key: string): Promise<void>;
@@ -260,6 +261,36 @@ export interface MetaResponse {
 
   /** Additional metadata fields. */
   [key: string]: string;
+}
+
+/**
+ * Machine-readable error codes for programmatic handling.
+ */
+export type OGErrorCode =
+  | 'TEMPLATE_NOT_FOUND'
+  | 'INVALID_PARAM'
+  | 'RENDER_TIMEOUT'
+  | 'RENDER_FAILED'
+  | 'STORAGE_ERROR'
+  | 'INVALID_SIZE'
+  | 'SSRF_BLOCKED'
+  | 'INTERNAL_ERROR';
+
+/**
+ * Base error class for all og-engine errors.
+ * Includes a machine-readable code and HTTP status hint.
+ */
+export class OGEngineError extends Error {
+  constructor(
+    message: string,
+    /** Machine-readable error code for programmatic handling. */
+    public readonly code: OGErrorCode,
+    /** HTTP status code hint for API responses. */
+    public readonly status: number = 500
+  ) {
+    super(message);
+    this.name = 'OGEngineError';
+  }
 }
 
 declare global {

@@ -1,6 +1,8 @@
-import dark from '@og-engine/template-dark';
-import minimal from '@og-engine/template-minimal';
-import sunset from '@og-engine/template-sunset';
+import dark from '../../../templates/free/dark';
+import minimal from '../../../templates/free/minimal';
+import sunset from '../../../templates/free/sunset';
+import glass from '../../../templates/pro/glass';
+import editorial from '../../../templates/pro/editorial';
 import type {
   CacheAdapter,
   OGTemplate,
@@ -9,19 +11,30 @@ import type {
   TemplateRegistryAdapter
 } from '@og-engine/types';
 
-const registryData = new Map<string, OGTemplate>([
+import { OGEngineError } from '@og-engine/types';
+
+const registryData = new Map<string, OGTemplate<any>>([
   [sunset.id, sunset],
   [minimal.id, minimal],
-  [dark.id, dark]
+  [dark.id, dark],
+  [glass.id, glass],
+  [editorial.id, editorial]
 ]);
 
+/**
+ * Creates a storage adapter backed by Cloudflare R2.
+ *
+ * @param bucket - The R2 bucket instance from the worker environment.
+ * @param publicBaseUrl - Public base URL for served assets.
+ * @returns A Cloudflare R2 storage adapter.
+ */
 export const cloudflareStorage = (bucket: R2Bucket, publicBaseUrl: string): StorageAdapter => ({
   async get(key) {
     const object = await bucket.get(key);
     if (!object) {
       return null;
     }
-    return Buffer.from(await object.arrayBuffer());
+    return new Uint8Array(await object.arrayBuffer());
   },
   async put(key, value, options) {
     await bucket.put(key, value, {
@@ -36,6 +49,12 @@ export const cloudflareStorage = (bucket: R2Bucket, publicBaseUrl: string): Stor
   }
 });
 
+/**
+ * Creates a cache adapter backed by Cloudflare KV.
+ *
+ * @param kv - The KV namespace instance from the worker environment.
+ * @returns A Cloudflare KV cache adapter.
+ */
 export const cloudflareCache = (kv: KVNamespace): CacheAdapter => ({
   async get(key) {
     return kv.get(key);
@@ -48,6 +67,11 @@ export const cloudflareCache = (kv: KVNamespace): CacheAdapter => ({
   }
 });
 
+/**
+ * Creates a template registry for Cloudflare Workers serving bundled templates.
+ *
+ * @returns An adapter that lists and retrieves statically bundled templates.
+ */
 export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
   async list() {
     return [...registryData.values()].map((template) => ({
@@ -63,7 +87,7 @@ export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
   async get(id) {
     const template = registryData.get(id);
     if (!template) {
-      throw new Error(`Template not found: ${id}`);
+      throw new OGEngineError(`Template not found: ${id}`, 'TEMPLATE_NOT_FOUND', 404);
     }
     return template;
   },
@@ -72,12 +96,24 @@ export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
   }
 });
 
+/**
+ * Environment bindings required for the Cloudflare platform adapter.
+ */
 export interface CloudflareBindings {
+  /** KV namespace used for fast cache lookups. */
   KV: KVNamespace;
+  /** R2 bucket used for binary image storage. */
   BUCKET: R2Bucket;
+  /** Public base URL used to build absolute image links. */
   PUBLIC_BASE_URL: string;
 }
 
+/**
+ * Factory for creating a Cloudflare-compatible platform adapter.
+ *
+ * @param bindings - Worker environment bindings.
+ * @returns A platform adapter using R2 and KV.
+ */
 export function cloudflareAdapter(bindings: CloudflareBindings): PlatformAdapter {
   return {
     storage: cloudflareStorage(bindings.BUCKET, bindings.PUBLIC_BASE_URL),

@@ -1,8 +1,10 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import dark from '@og-engine/template-dark';
-import minimal from '@og-engine/template-minimal';
-import sunset from '@og-engine/template-sunset';
+import dark from '../../../templates/free/dark';
+import minimal from '../../../templates/free/minimal';
+import sunset from '../../../templates/free/sunset';
+import glass from '../../../templates/pro/glass';
+import editorial from '../../../templates/pro/editorial';
 import type {
   CacheAdapter,
   OGTemplate,
@@ -10,13 +12,21 @@ import type {
   StorageAdapter,
   TemplateRegistryAdapter
 } from '@og-engine/types';
+import { OGEngineError } from '@og-engine/types';
 
-const registryData = new Map<string, OGTemplate>([
+const registryData = new Map<string, OGTemplate<any>>([
   [sunset.id, sunset],
   [minimal.id, minimal],
-  [dark.id, dark]
+  [dark.id, dark],
+  [glass.id, glass],
+  [editorial.id, editorial]
 ]);
 
+/**
+ * Creates a template registry that serves built-in templates from memory.
+ *
+ * @returns An adapter that lists and retrieves statically bundled templates.
+ */
 export const staticRegistry = (): TemplateRegistryAdapter => ({
   async list() {
     return [...registryData.values()].map((template) => ({
@@ -32,7 +42,7 @@ export const staticRegistry = (): TemplateRegistryAdapter => ({
   async get(id) {
     const template = registryData.get(id);
     if (!template) {
-      throw new Error(`Template not found: ${id}`);
+      throw new OGEngineError(`Template not found: ${id}`, 'TEMPLATE_NOT_FOUND', 404);
     }
     return template;
   },
@@ -41,6 +51,13 @@ export const staticRegistry = (): TemplateRegistryAdapter => ({
   }
 });
 
+/**
+ * Creates a storage adapter that persists files to the local filesystem.
+ *
+ * @param dir - Root directory for storage.
+ * @param baseUrl - Base URL for generating public file links.
+ * @returns A Node.js filesystem storage adapter.
+ */
 export const fileSystemStorage = (dir: string, baseUrl: string): StorageAdapter => ({
   async get(key) {
     try {
@@ -62,6 +79,11 @@ export const fileSystemStorage = (dir: string, baseUrl: string): StorageAdapter 
   }
 });
 
+/**
+ * Creates a lightweight in-memory cache adapter.
+ *
+ * @returns A cache adapter backed by a local Map.
+ */
 export const memoryCache = (): CacheAdapter => {
   const store = new Map<string, { value: string; expiresAt?: number }>();
   return {
@@ -85,12 +107,24 @@ export const memoryCache = (): CacheAdapter => {
   };
 };
 
+/**
+ * Configuration options for the Node.js platform adapter.
+ */
 export interface NodeAdapterOptions {
+  /** Root directory for cached images. Defaults to './.og-cache'. */
   storageDir?: string;
+  /** Base URL used to build absolute image links. */
   baseUrl?: string;
+  /** Optional Redis connection string (not implemented in v1). */
   redisUrl?: string;
 }
 
+/**
+ * Factory for creating a Node.js-compatible platform adapter.
+ *
+ * @param options - Configuration overrides.
+ * @returns A platform adapter using filesystem storage and memory cache.
+ */
 export function nodeAdapter(options: NodeAdapterOptions = {}): PlatformAdapter {
   void options.redisUrl;
   return {

@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@og-engine/template-dark':
+        specifier: workspace:*
+        version: link:../../templates/dark
+      '@og-engine/template-minimal':
+        specifier: workspace:*
+        version: link:../../templates/minimal
+      '@og-engine/template-sunset':
+        specifier: workspace:*
+        version: link:../../templates/sunset
+      '@og-engine/types':
+        specifier: workspace:*
+        version: link:../types

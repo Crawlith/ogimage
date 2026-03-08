@@ -1,8 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "outDir": "dist",
     "rootDir": "src",
-    "outDir": "dist"
+    "paths": {
+      "@og-engine/types": [
+        "../types/dist"
+      ]
+    }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

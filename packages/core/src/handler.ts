@@ -27,7 +27,7 @@ export interface HandlerDeps {
 }
 
 interface ImageHandlerResponse {
-  buffer: Buffer;
+  buffer: Uint8Array;
   contentType: 'image/png' | 'image/jpeg';
   headers: Record<string, string>;
   fromCache: boolean;

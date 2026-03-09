@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -19,18 +21,55 @@ jobs:
           version: 9
       - run: pnpm install
 
+      - name: Collect changed templates
+        id: changed
+        run: |
+          files=$(git diff --name-only "origin/${{ github.base_ref }}"..."${{ github.sha }}" | grep -E '^templates/.+\.tsx$' || true)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$files" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: AST Security Scan
-        run: pnpm template:scan
+        run: |
+          if [ -z "${{ steps.changed.outputs.files }}" ]; then
+            echo "No changed template files to scan."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "Scanning $file"
+            pnpm template:scan "$file"
+          done <<< "${{ steps.changed.outputs.files }}"
 
       - name: Render Benchmarks & Size Check
-        run: pnpm template:test
+        run: |
+          if [ -z "${{ steps.changed.outputs.files }}" ]; then
+            echo "No changed template files to benchmark."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            id="$(basename "$file" .tsx)"
+            echo "Benchmarking $id"
+            pnpm template:test "$id"
+          done <<< "${{ steps.changed.outputs.files }}"
 
       - name: Generate Visual Previews
-        run: pnpm template:preview
+        run: |
+          if [ -z "${{ steps.changed.outputs.files }}" ]; then
+            echo "No changed template files to render previews."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            id="$(basename "$file" .tsx)"
+            echo "Generating preview for $id"
+            pnpm template:preview "$id"
+          done <<< "${{ steps.changed.outputs.files }}"
 
       - name: Upload Visual Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: template-previews
-          path: templates/**/preview.png
+          path: templates/**/*.preview.png
           retention-days: 7

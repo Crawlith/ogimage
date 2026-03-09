@@ -53,14 +53,33 @@ Generate a stunning social image with a simple GET request:
 curl "https://og.yourdomain.com/api/og?template=sunset&title=Hello+World" --output og.png
 ```
 
+### Local testing (editor + API on `localhost:3000`)
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Explicit (same result):
+
+```bash
+pnpm --filter @og-engine/web dev
+```
+
+Open:
+- `http://localhost:3000` (template editor)
+- `http://localhost:3000/api/og?template=sunset&size=og&title=Hello+World` (direct image render)
+
 ### Or using the SDK in your app:
 
 ```typescript
 import { buildOgUrl } from '@og-engine/sdk';
 
-const url = buildOgUrl('https://og.yourdomain.com', {
+const url = buildOgUrl({
+  baseUrl: 'https://og.yourdomain.com',
   template: 'sunset',
   size: 'twitter-og',
+  format: 'png',
   params: {
     title: 'Designing at the Edge',
     author: '@aarav'
@@ -92,12 +111,11 @@ const url = buildOgUrl('https://og.yourdomain.com', {
 
 ## 🏠 Self-Hosting
 
-The engine can be deployed as a standard Next.js application or integrated into existing Node/Cloudflare environments using our adapters.
+The engine can be run with the local Node editor app (`web`) or integrated into existing Node/Cloudflare environments using adapters.
 
 ```bash
 pnpm install
-pnpm build
-pnpm start
+pnpm dev
 ```
 
 ---

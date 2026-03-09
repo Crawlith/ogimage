@@ -1,0 +1,19 @@
+{
+  "name": "@og-engine/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "node -e \"console.log('no tests')\"",
+    "dev": "pnpm build && node dist/web/src/server.js",
+    "start": "node dist/web/src/server.js"
+  },
+  "dependencies": {
+    "@og-engine/adapter-node": "workspace:^",
+    "@og-engine/core": "workspace:^",
+    "@og-engine/types": "workspace:*"
+  }
+}

@@ -1,8 +1,8 @@
-import dark from '../../../templates/free/dark';
-import minimal from '../../../templates/free/minimal';
-import sunset from '../../../templates/free/sunset';
-import glass from '../../../templates/pro/glass';
-import editorial from '../../../templates/pro/editorial';
+import dark from '../../../templates/free/dark.js';
+import minimal from '../../../templates/free/minimal.js';
+import sunset from '../../../templates/free/sunset.js';
+import glass from '../../../templates/pro/glass.js';
+import editorial from '../../../templates/pro/editorial.js';
 import type {
   CacheAdapter,
   OGTemplate,

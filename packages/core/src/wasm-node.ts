@@ -19,7 +19,7 @@ export async function initWasm(): Promise<void> {
   }
 
   const yoga = await import('yoga-wasm-web/auto');
-  const initMaybe: unknown = yoga.default ?? yoga;
+  const initMaybe: unknown = yoga.default ?? (yoga as { init?: unknown }).init;
   if (isInitFunction(initMaybe)) {
     await initMaybe();
   }

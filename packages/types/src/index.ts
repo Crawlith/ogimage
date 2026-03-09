@@ -77,9 +77,6 @@ export interface RenderContext {
   size: PlatformSize;
 }
 
-/** Tier controls access on the hosted API. Self-hosters have no restrictions. */
-export type TemplateTier = 'free' | 'pro';
-
 /**
  * Fully-typed OG template definition.
  */
@@ -98,9 +95,6 @@ export interface OGTemplate<S extends TemplateSchema = TemplateSchema> {
 
   /** Template version string (semver recommended). */
   version: string;
-
-  /** free = available to all, pro = requires paid key on hosted API */
-  tier: TemplateTier;
 
   /** Optional tag list used for filtering and discovery. */
   tags?: string[];

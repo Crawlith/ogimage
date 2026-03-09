@@ -13,7 +13,6 @@ const editorial: OGTemplate<typeof schema> = {
   description: 'High-end print magazine style with bold, asymmetric typography.',
   author: 'og-engine',
   version: '1.0.0',
-  tier: 'pro',
   tags: ['premium', 'editorial', 'typography'],
   supportedSizes: ['twitter-og', 'facebook-og', 'linkedin-og', 'og'],
   schema,

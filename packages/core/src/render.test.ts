@@ -46,7 +46,6 @@ describe('render', () => {
       description: 'd',
       author: 'a',
       version: '1.0.0',
-      tier: 'free',
       supportedSizes: ['og'],
       schema: { title: { type: 'string' } },
       render: vi.fn(() => ({ type: 'div', props: { children: 'ok' } }) as never)
@@ -80,7 +79,6 @@ describe('render', () => {
       description: 'd',
       author: 'a',
       version: '1.0.0',
-      tier: 'free',
       supportedSizes: ['og'],
       schema: {},
       render: vi.fn(() => null as never)
@@ -105,7 +103,6 @@ describe('render', () => {
       description: 'd',
       author: 'a',
       version: '1.0.0',
-      tier: 'free',
       supportedSizes: ['og'],
       schema: {},
       render: vi.fn(() => new Promise(() => {}) as never)

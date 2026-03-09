@@ -13,7 +13,6 @@ const glass: OGTemplate<typeof schema> = {
   description: 'Premium layered depth with a clean SaaS aesthetic.',
   author: 'og-engine',
   version: '1.0.0',
-  tier: 'pro',
   tags: ['premium', 'saas', 'modern'],
   supportedSizes: ['twitter-og', 'facebook-og', 'linkedin-og', 'og'],
   schema,

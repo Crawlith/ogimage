@@ -54,7 +54,6 @@ describe('createHandler', () => {
     description: 'd',
     author: 'a',
     version: '1.0.0',
-    tier: 'free',
     supportedSizes: ['og'],
     schema: {},
     render: () => ({ type: 'div' }) as never

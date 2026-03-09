@@ -16,7 +16,6 @@ const template: OGTemplate<typeof schema> = {
   description: 'Refined typographic composition with generous whitespace',
   author: 'og-engine',
   version: '2.0.0',
-  tier: 'free',
   tags: ['minimal', 'swiss', 'typography'],
   supportedSizes: [
     'twitter-og',

@@ -15,7 +15,6 @@ const template: OGTemplate<typeof schema> = {
   description: 'Terminal-inspired black canvas with mono typography and sharp accents',
   author: 'og-engine',
   version: '2.0.0',
-  tier: 'free',
   tags: ['terminal', 'hacker', 'mono', 'dark'],
   supportedSizes: [
     'twitter-og',

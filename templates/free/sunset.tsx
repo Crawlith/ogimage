@@ -6,7 +6,6 @@ const template = {
   description: 'Editorial newspaper-inspired composition with serif hierarchy',
   author: 'og-engine',
   version: '2.0.0',
-  tier: 'free',
   tags: ['editorial', 'serif', 'magazine', 'newsroom'],
   supportedSizes: [
     'twitter-og',

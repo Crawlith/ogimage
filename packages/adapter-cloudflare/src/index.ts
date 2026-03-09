@@ -1,8 +1,3 @@
-import dark from '../../../templates/free/dark.js';
-import minimal from '../../../templates/free/minimal.js';
-import sunset from '../../../templates/free/sunset.js';
-import glass from '../../../templates/pro/glass.js';
-import editorial from '../../../templates/pro/editorial.js';
 import type {
   CacheAdapter,
   OGTemplate,
@@ -12,14 +7,6 @@ import type {
 } from '@og-engine/types';
 
 import { OGEngineError } from '@og-engine/types';
-
-const registryData = new Map<string, OGTemplate>([
-  [sunset.id, sunset as unknown as OGTemplate],
-  [minimal.id, minimal as unknown as OGTemplate],
-  [dark.id, dark as unknown as OGTemplate],
-  [glass.id, glass as unknown as OGTemplate],
-  [editorial.id, editorial as unknown as OGTemplate]
-]);
 
 /**
  * Creates a storage adapter backed by Cloudflare R2.
@@ -68,11 +55,17 @@ export const cloudflareCache = (kv: KVNamespace): CacheAdapter => ({
 });
 
 /**
- * Creates a template registry for Cloudflare Workers serving bundled templates.
+ * Creates a template registry for Cloudflare Workers from app-provided templates.
  *
- * @returns An adapter that lists and retrieves statically bundled templates.
+ * @param templates - Template set to expose via the registry.
+ * @returns An adapter that lists and retrieves templates from memory.
  */
-export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
+export const cloudflareRegistry = (templates: OGTemplate[]): TemplateRegistryAdapter => {
+  const registryData = new Map<string, OGTemplate>(
+    templates.map((template) => [template.id, template] as const)
+  );
+
+  return {
   async list() {
     return [...registryData.values()].map((template) => ({
       id: template.id,
@@ -94,7 +87,8 @@ export const cloudflareRegistry = (): TemplateRegistryAdapter => ({
   async exists(id) {
     return registryData.has(id);
   }
-});
+};
+};
 
 /**
  * Environment bindings required for the Cloudflare platform adapter.
@@ -106,6 +100,8 @@ export interface CloudflareBindings {
   BUCKET: R2Bucket;
   /** Public base URL used to build absolute image links. */
   PUBLIC_BASE_URL: string;
+  /** Optional template registry supplied by the application. */
+  registry?: TemplateRegistryAdapter;
 }
 
 /**
@@ -118,6 +114,6 @@ export function cloudflareAdapter(bindings: CloudflareBindings): PlatformAdapter
   return {
     storage: cloudflareStorage(bindings.BUCKET, bindings.PUBLIC_BASE_URL),
     cache: cloudflareCache(bindings.KV),
-    registry: cloudflareRegistry()
+    registry: bindings.registry ?? cloudflareRegistry([])
   };
 }

@@ -1,10 +1,5 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import dark from '../../../templates/free/dark.js';
-import minimal from '../../../templates/free/minimal.js';
-import sunset from '../../../templates/free/sunset.js';
-import glass from '../../../templates/pro/glass.js';
-import editorial from '../../../templates/pro/editorial.js';
 import type {
   CacheAdapter,
   OGTemplate,
@@ -14,20 +9,18 @@ import type {
 } from '@og-engine/types';
 import { OGEngineError } from '@og-engine/types';
 
-const registryData = new Map<string, OGTemplate>([
-  [sunset.id, sunset as unknown as OGTemplate],
-  [minimal.id, minimal as unknown as OGTemplate],
-  [dark.id, dark as unknown as OGTemplate],
-  [glass.id, glass as unknown as OGTemplate],
-  [editorial.id, editorial as unknown as OGTemplate]
-]);
-
 /**
- * Creates a template registry that serves built-in templates from memory.
+ * Creates a template registry from application-provided templates.
  *
- * @returns An adapter that lists and retrieves statically bundled templates.
+ * @param templates - Template set to expose via the registry.
+ * @returns An adapter that lists and retrieves templates from memory.
  */
-export const staticRegistry = (): TemplateRegistryAdapter => ({
+export const staticRegistry = (templates: OGTemplate[]): TemplateRegistryAdapter => {
+  const registryData = new Map<string, OGTemplate>(
+    templates.map((template) => [template.id, template] as const)
+  );
+
+  return {
   async list() {
     return [...registryData.values()].map((template) => ({
       id: template.id,
@@ -49,7 +42,8 @@ export const staticRegistry = (): TemplateRegistryAdapter => ({
   async exists(id) {
     return registryData.has(id);
   }
-});
+};
+};
 
 /**
  * Creates a storage adapter that persists files to the local filesystem.
@@ -117,6 +111,8 @@ export interface NodeAdapterOptions {
   baseUrl?: string;
   /** Optional Redis connection string (not implemented in v1). */
   redisUrl?: string;
+  /** Optional template registry supplied by the application. */
+  registry?: TemplateRegistryAdapter;
 }
 
 /**
@@ -130,6 +126,6 @@ export function nodeAdapter(options: NodeAdapterOptions = {}): PlatformAdapter {
   return {
     storage: fileSystemStorage(options.storageDir ?? './.og-cache', options.baseUrl ?? ''),
     cache: memoryCache(),
-    registry: staticRegistry()
+    registry: options.registry ?? staticRegistry([])
   };
 }

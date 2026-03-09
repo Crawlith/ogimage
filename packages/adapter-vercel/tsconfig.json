@@ -1,10 +1,20 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": {
+      "@og-engine/types": [
+        "../types/dist"
+      ],
+      "@og-engine/adapter-node": [
+        "../adapter-node/dist"
+      ]
+    }
   },
   "include": [
-    "src/**/*",
-    "../../templates/**/*"
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
   ]
 }

@@ -2,12 +2,30 @@ import { createServer } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { nodeAdapter } from '@og-engine/adapter-node';
+import { nodeAdapter, staticRegistry } from '@og-engine/adapter-node';
 import { createHandler } from '@og-engine/core';
-import { PLATFORM_SIZES, type OGRequest, type PlatformSize, type TemplateSchema } from '@og-engine/types';
+import {
+  PLATFORM_SIZES,
+  type OGRequest,
+  type OGTemplate,
+  type PlatformSize,
+  type TemplateSchema
+} from '@og-engine/types';
+import sunset from '../../templates/free/sunset.js';
+import minimal from '../../templates/free/minimal.js';
+import dark from '../../templates/free/dark.js';
+import glass from '../../templates/pro/glass.js';
+import editorial from '../../templates/pro/editorial.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const PLATFORM_SIZE_KEYS = Object.keys(PLATFORM_SIZES) as PlatformSize[];
+const registry = staticRegistry([
+  sunset as unknown as OGTemplate,
+  minimal as unknown as OGTemplate,
+  dark as unknown as OGTemplate,
+  glass as unknown as OGTemplate,
+  editorial as unknown as OGTemplate
+]);
 
 function parseSize(value: string | null): PlatformSize {
   if (value && PLATFORM_SIZE_KEYS.includes(value as PlatformSize)) {
@@ -338,7 +356,6 @@ function editorPageHtml(): string {
 }
 
 async function listTemplates() {
-  const registry = nodeAdapter().registry;
   const list = await registry.list();
 
   return Promise.all(
@@ -378,7 +395,8 @@ async function handleOg(requestUrl: URL): Promise<Response> {
   const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
   const adapter = nodeAdapter({
     storageDir: './.og-cache',
-    baseUrl
+    baseUrl,
+    registry
   });
   const handler = createHandler({ platform: adapter });
 

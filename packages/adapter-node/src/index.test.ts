@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { OGEngineError } from '@og-engine/types';
+import { OGEngineError, type OGTemplate } from '@og-engine/types';
 import {
   fileSystemStorage,
   memoryCache,
@@ -10,12 +10,26 @@ import {
   staticRegistry
 } from './index.js';
 
+function makeTemplate(id: string): OGTemplate {
+  return {
+    id,
+    name: id,
+    description: `${id} description`,
+    author: 'test',
+    version: '1.0.0',
+    tier: 'free',
+    supportedSizes: ['og'],
+    schema: {},
+    render: () => ({ type: 'div' }) as never
+  };
+}
+
 describe('adapter-node', () => {
   it('staticRegistry lists and resolves templates', async () => {
-    const registry = staticRegistry();
+    const registry = staticRegistry([makeTemplate('one'), makeTemplate('two')]);
     const list = await registry.list();
 
-    expect(list.length).toBeGreaterThanOrEqual(5);
+    expect(list.length).toBe(2);
     expect(list.every((item) => Array.isArray(item.tags))).toBe(true);
 
     const first = list[0];
@@ -68,14 +82,16 @@ describe('adapter-node', () => {
     nowSpy.mockRestore();
   });
 
-  it('nodeAdapter wires filesystem, memory cache, and static registry', async () => {
+  it('nodeAdapter wires filesystem, memory cache, and provided registry', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'og-node-adapter-'));
 
     try {
+      const registry = staticRegistry([makeTemplate('demo')]);
       const adapter = nodeAdapter({
         storageDir: dir,
         baseUrl: 'https://img.example.com',
-        redisUrl: 'redis://unused'
+        redisUrl: 'redis://unused',
+        registry
       });
 
       await adapter.storage.put('k', new Uint8Array([9]), { contentType: 'image/png' });
@@ -86,9 +102,15 @@ describe('adapter-node', () => {
       await expect(adapter.cache.get('k')).resolves.toBe('v');
 
       const list = await adapter.registry.list();
-      expect(list.length).toBeGreaterThan(0);
+      expect(list.length).toBe(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it('nodeAdapter defaults to empty registry when none supplied', async () => {
+    const adapter = nodeAdapter();
+    await expect(adapter.registry.list()).resolves.toEqual([]);
+    await expect(adapter.registry.exists('anything')).resolves.toBe(false);
   });
 });

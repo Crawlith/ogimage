@@ -2,6 +2,7 @@
 
 **The high-performance, platform-agnostic social image engine.**  
 Build, preview, and deploy social images that look handcrafted—at the speed of the edge.
+<img width="1503" height="756" alt="OG Engine" src="https://github.com/user-attachments/assets/ec7e2a19-3785-4327-b318-bc5495db2c4a" />
 
 [![npm version](https://img.shields.io/npm/v/@og-engine/core?color=e8a020&style=flat-square)](https://www.npmjs.com/package/@og-engine/core)
 [![License](https://img.shields.io/github/license/og-engine/og-engine?style=flat-square&color=e8a020)](LICENSE)
@@ -82,18 +83,10 @@ const url = buildOgUrl({
   format: 'png',
   params: {
     title: 'Designing at the Edge',
-    author: '@aarav'
+    author: '@saurabhsharma2u'
   }
 });
 ```
-
----
-
-## 🎨 Built-in Templates
-
-| Sunset Editorial | Minimal Swiss | Dark Terminal |
-| :--- | :--- | :--- |
-| ![Sunset](templates/free/sunset.preview.png) | ![Minimal](templates/free/minimal.preview.png) | ![Dark](templates/free/dark.preview.png) |
 
 ---
 
